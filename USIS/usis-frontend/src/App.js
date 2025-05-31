@@ -1,0 +1,1522 @@
+import React, { useEffect, useState, useRef } from "react";
+import axios from "axios";
+import Select, { components } from "react-select";
+import './App.css';
+import { format } from 'date-fns';
+import html2canvas from 'html2canvas';
+import { Waves } from "./components/ui/waves-background";
+import AnimatedGridPattern from "./components/ui/animated-grid-pattern";
+
+const API_BASE = "http://localhost:5000/api";
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TIME_SLOTS = [
+  { value: "8:00 AM-9:20 AM", label: "8:00 AM-9:20 AM (BD Time)" },
+  { value: "9:30 AM-10:50 AM", label: "9:30 AM-10:50 AM (BD Time)" },
+  { value: "11:00 AM-12:20 PM", label: "11:00 AM-12:20 PM (BD Time)" },
+  { value: "12:30 PM-1:50 PM", label: "12:30 PM-1:50 PM (BD Time)" },
+  { value: "2:00 PM-3:20 PM", label: "2:00 PM-3:20 PM (BD Time)" },
+  { value: "3:30 PM-4:50 PM", label: "3:30 PM-4:50 PM (BD Time)" },
+  { value: "5:00 PM-6:20 PM", label: "5:00 PM-6:20 PM (BD Time)" }
+];
+
+// Helper: format 24-hour time string to 12-hour AM/PM
+const formatTime12Hour = (timeString) => {
+    if (!timeString) return 'N/A';
+    try {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return format(date, 'h:mm aa');
+    } catch (error) {
+        return timeString;
+    }
+};
+
+function renderRoutineGrid(sections, selectedDays) {
+  console.log("Rendering routine grid...");
+  console.log("Sections received:", sections);
+  console.log("Selected days:", selectedDays);
+  
+  // Build a lookup: { [day]: { [timeSlotValue]: [entries, ...] } }
+  const grid = {};
+  for (const day of DAYS) {
+    grid[day] = {};
+    for (const slot of TIME_SLOTS.map(s => s.value)) {
+      grid[day][slot] = [];
+    }
+  }
+
+  // Helper function to format time for display
+  const formatDisplayTime = (timeStr) => {
+    if (!timeStr) return '';
+    try {
+      // Handle both 24-hour and 12-hour formats
+      let hours, minutes;
+      if (timeStr.includes(':')) {
+        [hours, minutes] = timeStr.split(':').map(Number);
+        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+          const period = timeStr.includes('PM');
+          if (period && hours !== 12) hours += 12;
+          if (!period && hours === 12) hours = 0;
+        }
+      } else {
+        return timeStr;
+      }
+      const date = new Date();
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      return format(date, 'h:mm aa');
+    } catch (error) {
+      return timeStr;
+    }
+  };
+
+  console.log("Iterating through sections for grid population:", sections);
+  sections.forEach(section => {
+    // Process class schedules
+    if (section.sectionSchedule && section.sectionSchedule.classSchedules) {
+      section.sectionSchedule.classSchedules.forEach(sched => {
+        const day = sched.day.charAt(0).toUpperCase() + sched.day.slice(1).toLowerCase();
+        if (!selectedDays.includes(day)) return;
+
+        const startTime = formatDisplayTime(sched.startTime);
+        const endTime = formatDisplayTime(sched.endTime);
+        const formattedTime = `${startTime} - ${endTime}`;
+
+        // Find matching time slot
+        TIME_SLOTS.forEach(slot => {
+          const [slotStart, slotEnd] = slot.value.split('-').map(t => t.trim());
+          const schedStart = timeToMinutes(sched.startTime);
+          const schedEnd = timeToMinutes(sched.endTime);
+          const slotStartMin = timeToMinutes(slotStart);
+          const slotEndMin = timeToMinutes(slotEnd);
+
+          if (schedules_overlap(schedStart, schedEnd, slotStartMin, slotEndMin)) {
+            grid[day][slot.value].push({
+              type: "class",
+              section: section,
+              formattedTime: formattedTime,
+              day: day,
+              room: sched.room || section.roomName
+            });
+          }
+        });
+      });
+    }
+
+    // Process lab schedules
+    if (section.labSchedules && section.labSchedules.length > 0) {
+      section.labSchedules.forEach(lab => {
+        const day = lab.day.charAt(0).toUpperCase() + lab.day.slice(1).toLowerCase();
+        if (!selectedDays.includes(day)) return;
+
+        const startTime = formatDisplayTime(lab.startTime);
+        const endTime = formatDisplayTime(lab.endTime);
+        const formattedTime = `${startTime} - ${endTime}`;
+
+        // Find matching time slot
+        TIME_SLOTS.forEach(slot => {
+          const [slotStart, slotEnd] = slot.value.split('-').map(t => t.trim());
+          const labStart = timeToMinutes(lab.startTime);
+          const labEnd = timeToMinutes(lab.endTime);
+          const slotStartMin = timeToMinutes(slotStart);
+          const slotEndMin = timeToMinutes(slotEnd);
+
+          if (schedules_overlap(labStart, labEnd, slotStartMin, slotEndMin)) {
+            grid[day][slot.value].push({
+              type: "lab",
+              section: section,
+              formattedTime: formattedTime,
+              day: day,
+              room: lab.room || section.labRoomName
+            });
+          }
+        });
+      });
+    }
+  });
+
+  return (
+    <table className="routine-table" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
+      <thead>
+        <tr>
+          <th>Time/Day</th>
+          {selectedDays.map(day => <th key={day}>{day}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {TIME_SLOTS.map(slot => (
+          <tr key={slot.value}>
+            <td><b>{slot.label}</b></td>
+            {selectedDays.map(day => (
+              <td key={day}>
+                {grid[day][slot.value].map((entry, idx) => (
+                  <div key={idx} style={{
+                    marginBottom: 4,
+                    padding: '8px',
+                    backgroundColor: entry.type === 'lab' ? '#e3f2fd' : '#f5f5f5',
+                    borderRadius: '4px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ 
+                      fontWeight: 'bold',
+                      color: entry.type === 'lab' ? '#1976d2' : '#333'
+                    }}>
+                      {entry.type === "class" ? "Class" : "Lab"}: {entry.section.courseCode}
+                    </div>
+                    <div style={{ fontSize: '0.9em', marginTop: '4px' }}>
+                      {entry.section.sectionName && <span>Section: {entry.section.sectionName}<br /></span>}
+                      {entry.section.faculties && <span>Faculty: {entry.section.faculties}<br /></span>}
+                      {entry.room && <span>Room: {entry.room}<br /></span>}
+                      <div style={{ 
+                        marginTop: '4px',
+                        color: entry.type === 'lab' ? '#1976d2' : '#666',
+                        fontSize: '0.9em'
+                      }}>
+                        {entry.formattedTime}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// Helper to convert time string to minutes
+function timeToMinutes(tstr) {
+  tstr = tstr.trim();
+  try {
+    if (tstr.includes('AM') || tstr.includes('PM')) {
+      const [time, period] = tstr.split(' ');
+      let [h, m] = time.split(':').map(Number);
+      if (period === 'PM' && h !== 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      return h * 60 + m;
+    } else if (tstr.includes(':')) {
+      const [h, m] = tstr.split(':').map(Number);
+      return h * 60 + m;
+    } else {
+      return 0;
+    }
+  } catch(e) {
+    console.error("Error in timeToMinutes:", tstr, e);
+    return 0;
+  }
+}
+
+// Helper to check if two time ranges overlap (in minutes)
+function schedules_overlap(start1, end1, start2, end2) {
+  return Math.max(start1, start2) < Math.min(end1, end2);
+}
+
+// New Component: SeatStatusPage
+const SeatStatusPage = ({ courses }) => {
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [isLoadingSections, setIsLoadingSections] = useState(false);
+
+  // Fetch course details when a course is selected
+  useEffect(() => {
+    if (selectedCourse) {
+      setIsLoadingSections(true);
+      axios.get(`${API_BASE}/course_details?course=${selectedCourse.value}`)
+        .then(res => setSections(res.data))
+        .catch(error => {
+          console.error("Error fetching sections:", error);
+          setSections([]); // Clear sections on error
+        })
+        .finally(() => setIsLoadingSections(false));
+    } else {
+      setSections([]);
+      setIsLoadingSections(false);
+    }
+  }, [selectedCourse]);
+
+  const sortedSections = sections.slice().sort((a, b) => {
+    const nameA = a.sectionName || '';
+    const nameB = b.sectionName || '';
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  return (
+    <div className="seat-status-container">
+      <h2 className="seat-status-heading">Seat Status</h2>
+      <div style={{ marginBottom: '18px', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
+        <Select
+          options={courses.map(c => ({ value: c.code, label: c.code }))}
+          value={selectedCourse}
+          onChange={setSelectedCourse}
+          placeholder="Search and select a course..."
+          isClearable={true}
+          isSearchable={true}
+        />
+      </div>
+      {isLoadingSections && (
+        <div className="seat-status-message loading">Loading sections...</div>
+      )}
+      {!selectedCourse && !isLoadingSections && (
+        <div className="seat-status-message info">Please select a course to view seat status.</div>
+      )}
+      {selectedCourse && !isLoadingSections && sections.length === 0 && (
+        <div className="seat-status-message warning">No sections found with available seats for {selectedCourse.label}.</div>
+      )}
+      {selectedCourse && sections.length > 0 && (
+        <div className="seat-status-table-wrapper">
+          <table className="seat-status-table">
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th>Faculty</th>
+                <th>Seats</th>
+                <th>Schedule</th>
+                <th>Midterm Exam</th>
+                <th>Final Exam</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedSections.map(section => (
+                <tr key={section.sectionId}>
+                  <td>
+                    <div style={{ fontWeight: '500' }}>{section.sectionName}</div>
+                    <div style={{ fontSize: '0.9em', color: '#6c757d' }}>{section.courseCode}</div>
+                  </td>
+                  <td>{section.faculties || 'TBA'}</td>
+                  <td>
+                    <div className={
+                      section.availableSeats > 10 ? 'seat-badge seat-available' :
+                      section.availableSeats > 0 ? 'seat-badge seat-few' : 'seat-badge seat-full'
+                    }>
+                      {section.availableSeats} / {section.capacity}
+                    </div>
+                  </td>
+                  <td>
+                    {/* Class Schedule */}
+                    {(section.sectionSchedule?.classSchedules || []).map((schedule, index) => (
+                      <div key={index} className="class-schedule">
+                        <span className="schedule-day">{schedule.day}</span>{' '}
+                        <span>{formatTime12Hour(schedule.startTime)} - {formatTime12Hour(schedule.endTime)}</span>
+                        {schedule.room && (
+                          <span className="schedule-room"> ({schedule.room})</span>
+                        )}
+                      </div>
+                    ))}
+                    {/* Lab Schedule */}
+                    {(section.labSchedules || []).map((schedule, index) => (
+                      <div key={index} className="lab-schedule">
+                        <span className="schedule-day">Lab: {schedule.day}</span>{' '}
+                        <span>{formatTime12Hour(schedule.startTime)} - {formatTime12Hour(schedule.endTime)}</span>
+                        {schedule.room && (
+                          <span className="schedule-room"> ({schedule.room})</span>
+                        )}
+                      </div>
+                    ))}
+                  </td>
+                  <td>
+                    {section.midExamDate ? (
+                      <>
+                        <div>{section.midExamDate}</div>
+                        {section.formattedMidExamTime && <div style={{ color: '#666', fontSize: '0.97em' }}>{section.formattedMidExamTime}</div>}
+                      </>
+                    ) : (
+                      <span style={{ color: '#aaa', fontStyle: 'italic' }}>Not Scheduled</span>
+                    )}
+                  </td>
+                  <td>
+                    {section.finalExamDate ? (
+                      <>
+                        <div>{section.finalExamDate}</div>
+                        {section.formattedFinalExamTime && <div style={{ color: '#666', fontSize: '0.97em' }}>{section.formattedFinalExamTime}</div>}
+                      </>
+                    ) : (
+                      <span style={{ color: '#aaa', fontStyle: 'italic' }}>Not Scheduled</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Add ExamConflictMessage component before App component
+const ExamConflictMessage = ({ message }) => {
+  // Parse the message into sections
+  const sections = {
+    courses: [],
+    midtermConflicts: [],
+    finalConflicts: []
+  };
+
+  // Parse the message
+  const coursesMatch = message.match(/Affected Courses:\s*([^]*?)(?=Midterm|$)/);
+  if (coursesMatch) {
+    sections.courses = coursesMatch[1].split(',').map(c => c.trim()).filter(Boolean);
+  }
+
+  // Extract midterm conflicts
+  const midtermMatch = message.match(/Midterm Conflicts(.*?)(?=Final Conflicts|$)/s);
+  if (midtermMatch) {
+    sections.midtermConflicts = midtermMatch[1]
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.includes('↔'));
+  }
+
+  // Extract final conflicts
+  const finalMatch = message.match(/Final Conflicts([^]*?)$/s);
+  if (finalMatch) {
+    sections.finalConflicts = finalMatch[1]
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.includes('↔'));
+  }
+
+  return (
+    <div style={{
+      backgroundColor: '#fff3f3',
+      border: '1px solid #ffcdd2',
+      borderRadius: '8px',
+      padding: '20px',
+      margin: '16px 0',
+      color: '#d32f2f',
+      fontSize: '0.95em',
+      lineHeight: '1.5'
+    }}>
+      <div style={{ 
+        fontWeight: 'bold', 
+        marginBottom: '16px', 
+        fontSize: '1.2em',
+        textAlign: 'center',
+        color: '#c62828'
+      }}>
+        Exam Conflicts
+      </div>
+      
+      <div style={{ 
+        marginBottom: '20px',
+        textAlign: 'center',
+        padding: '8px',
+        backgroundColor: 'rgba(255, 205, 210, 0.2)',
+        borderRadius: '4px'
+      }}>
+        <strong>Affected Courses:</strong>{' '}
+        {sections.courses.map((course, i) => (
+          <span key={i} style={{
+            display: 'inline-block',
+            margin: '0 4px',
+            padding: '2px 8px',
+            backgroundColor: 'rgba(255, 205, 210, 0.5)',
+            borderRadius: '4px',
+            fontWeight: '500'
+          }}>
+            {course}
+          </span>
+        ))}
+      </div>
+
+      {sections.midtermConflicts.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ 
+            fontWeight: 'bold', 
+            marginBottom: '12px', 
+            color: '#c62828',
+            borderBottom: '1px solid rgba(198, 40, 40, 0.2)',
+            paddingBottom: '4px'
+          }}>
+            Midterm Conflicts
+          </div>
+          {sections.midtermConflicts.map((conflict, index) => (
+            <div key={index} style={{ 
+              marginBottom: '8px',
+              padding: '12px',
+              backgroundColor: 'rgba(255, 205, 210, 0.2)',
+              borderRadius: '6px',
+              fontSize: '0.95em'
+            }}>
+              {conflict}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sections.finalConflicts.length > 0 && (
+        <div>
+          <div style={{ 
+            fontWeight: 'bold', 
+            marginBottom: '12px', 
+            color: '#c62828',
+            borderBottom: '1px solid rgba(198, 40, 40, 0.2)',
+            paddingBottom: '4px'
+          }}>
+            Final Conflicts
+          </div>
+          {sections.finalConflicts.map((conflict, index) => (
+            <div key={index} style={{ 
+              marginBottom: '8px',
+              padding: '12px',
+              backgroundColor: 'rgba(255, 205, 210, 0.2)',
+              borderRadius: '6px',
+              fontSize: '0.95em'
+            }}>
+              {conflict}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Add ExamSchedule component before RoutineResult
+const ExamSchedule = ({ sections }) => {
+  // Extract and organize exam dates
+  const examDates = sections.map(section => {
+    // Split date and time for midterm and final
+    const parseExamDetail = (detail) => {
+      if (!detail) return { date: '', time: '' };
+      // Try to split by newline or by first space
+      const [date, ...rest] = detail.split(/\n|\r|,|\s(?=\d{1,2}:\d{2}\s*[AP]M)/);
+      const time = rest.join(' ').trim();
+      return { date: date.trim(), time };
+    };
+    const mid = parseExamDetail(section.sectionSchedule?.midExamDetail);
+    const fin = parseExamDetail(section.sectionSchedule?.finalExamDetail);
+    return {
+      courseCode: section.courseCode,
+      sectionName: section.sectionName,
+      midterm: mid,
+      final: fin
+    };
+  });
+
+  return (
+    <div style={{
+      marginTop: "40px",
+      padding: "24px",
+      backgroundColor: "#ffffff",
+      borderRadius: "12px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      border: "1px solid #e0e0e0"
+    }}>
+      <h3 style={{ 
+        textAlign: 'center', 
+        marginBottom: '24px',
+        color: '#222',
+        fontSize: '1.4em',
+        fontWeight: '600',
+        borderBottom: '2px solid #f0f0f0',
+        paddingBottom: '12px'
+      }}>
+        Exam Dates
+      </h3>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="exam-dates-table">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Section</th>
+              <th>Midterm Exam</th>
+              <th>Final Exam</th>
+            </tr>
+          </thead>
+          <tbody>
+            {examDates.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: 'center', color: '#888', padding: '24px', fontStyle: 'italic' }}>
+                  No exams scheduled.
+                </td>
+              </tr>
+            ) : (
+              examDates.map((exam, index) => (
+                <tr key={index}>
+                  <td>{exam.courseCode}</td>
+                  <td>{exam.sectionName}</td>
+                  <td>
+                    {exam.midterm.date ? (
+                      <>
+                        <div>{exam.midterm.date}</div>
+                        {exam.midterm.time && <div style={{ color: '#666', fontSize: '0.97em' }}>{exam.midterm.time}</div>}
+                      </>
+                    ) : (
+                      <span style={{ color: '#aaa', fontStyle: 'italic' }}>Not Scheduled</span>
+                    )}
+                  </td>
+                  <td>
+                    {exam.final.date ? (
+                      <>
+                        <div>{exam.final.date}</div>
+                        {exam.final.time && <div style={{ color: '#666', fontSize: '0.97em' }}>{exam.final.time}</div>}
+                      </>
+                    ) : (
+                      <span style={{ color: '#aaa', fontStyle: 'italic' }}>Not Scheduled</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// Add CampusDaysDisplay component before RoutineResult
+const CampusDaysDisplay = ({ routine }) => {
+  if (!routine || !Array.isArray(routine)) return null;
+
+  const days = new Set();
+  routine.forEach(section => {
+    // Add class schedule days
+    if (section.sectionSchedule?.classSchedules) {
+      section.sectionSchedule.classSchedules.forEach(sched => {
+        days.add(sched.day.toUpperCase());
+      });
+    }
+    // Add lab schedule days
+    if (section.labSchedules) {
+      section.labSchedules.forEach(lab => {
+        days.add(lab.day.toUpperCase());
+      });
+    }
+  });
+
+  const sortedDays = Array.from(days).sort((a, b) => {
+    const dayOrder = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    return dayOrder.indexOf(a) - dayOrder.indexOf(b);
+  });
+
+  return (
+    <div style={{ 
+      marginBottom: '20px', 
+      padding: '15px',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '8px',
+      border: '1px solid #e9ecef'
+    }}>
+      <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>Campus Days</h4>
+      <div style={{ fontSize: '1.1em' }}>
+        <span style={{ fontWeight: 'bold' }}>Total Days: {sortedDays.length}</span>
+        <br />
+        <span style={{ color: '#6c757d' }}>
+          Required Days: {sortedDays.join(', ')}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// Custom option component for the main course selection dropdown
+const CourseOption = ({ innerRef, innerProps, data, isSelected }) => (
+  <div ref={innerRef} {...innerProps} style={{ padding: '8px 12px', cursor: 'pointer', color: data.isDisabled ? '#aaa' : 'black' }}>
+    <div>
+      <span style={{ fontWeight: 'bold', textDecoration: data.isDisabled ? 'line-through' : 'none' }}>{data.label}</span>
+      {data.isDisabled && (
+        <span style={{ fontSize: '0.8em', color: '#dc3545', marginLeft: '10px' }}>(No Seats Available)</span>
+      )}
+    </div>
+  </div>
+);
+
+// --- Make Routine Page ---
+const MakeRoutinePage = () => {
+  const [routineCourses, setRoutineCourses] = useState([]);
+  const [routineFaculty, setRoutineFaculty] = useState(null);
+  const [routineDays, setRoutineDays] = useState(DAYS.map(d => ({ value: d, label: d })));
+  const [routineFacultyOptions, setRoutineFacultyOptions] = useState([]);
+  const [routineResult, setRoutineResult] = useState(null);
+  const [availableFacultyByCourse, setAvailableFacultyByCourse] = useState({});
+  const [selectedFacultyByCourse, setSelectedFacultyByCourse] = useState({});
+  const [routineTimes, setRoutineTimes] = useState(TIME_SLOTS);
+  const [routineError, setRoutineError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState(null);
+  const [commutePreference, setCommutePreference] = useState("");
+  const [selectedSectionsByFaculty, setSelectedSectionsByFaculty] = useState({});
+  const [usedAI, setUsedAI] = useState(false);
+  const [courseOptions, setCourseOptions] = useState([]);
+  const routineGridRef = useRef(null); // Create a ref for the routine grid
+
+  // Function to handle PNG download
+  const handleDownloadPNG = () => {
+    if (routineGridRef.current) {
+      html2canvas(routineGridRef.current, { scale: 2 }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'routine.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+  };
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/courses`).then(res => {
+      // Prepare options for the main course select, including disabled state
+      const options = res.data.map(course => ({
+        value: course.code,
+        label: course.code,
+        isDisabled: course.totalAvailableSeats <= 0,
+        totalAvailableSeats: course.totalAvailableSeats
+      }));
+      setCourseOptions(options);
+    });
+  }, []);
+
+  // Handler and logic implementations (copied from previous working version)
+  const handleCourseSelect = async (selectedOptions) => {
+    setRoutineCourses(selectedOptions);
+    for (const course of selectedOptions) {
+      try {
+        const res = await axios.get(`${API_BASE}/course_details?course=${course.value}`);
+        const facultySections = {};
+        res.data.forEach(section => {
+          if (section.faculties) {
+            const availableSeats = section.capacity - section.consumedSeat;
+            if (availableSeats > 0) {
+              if (!facultySections[section.faculties]) {
+                facultySections[section.faculties] = {
+                  sections: [],
+                  totalSeats: 0,
+                  availableSeats: 0
+                };
+              }
+              facultySections[section.faculties].sections.push(section);
+              facultySections[section.faculties].totalSeats += section.capacity;
+              facultySections[section.faculties].availableSeats += availableSeats;
+            }
+          }
+        });
+        setAvailableFacultyByCourse(prev => ({ ...prev, [course.value]: facultySections }));
+      } catch (error) {}
+    }
+    // Remove faculty data for unselected courses
+    const selectedCourseCodes = selectedOptions.map(c => c.value);
+    setAvailableFacultyByCourse(prev => {
+      const newState = {};
+      selectedCourseCodes.forEach(code => { if (prev[code]) newState[code] = prev[code]; });
+      return newState;
+    });
+    setSelectedFacultyByCourse(prev => {
+      const newState = {};
+      selectedCourseCodes.forEach(code => { if (prev[code]) newState[code] = prev[code]; });
+      return newState;
+    });
+    setSelectedSectionsByFaculty(prev => {
+      const newState = {};
+      selectedCourseCodes.forEach(code => { if (prev[code]) newState[code] = prev[code]; });
+      return newState;
+    });
+  };
+
+  const handleFacultyChange = (courseValue, selected) => {
+    setSelectedFacultyByCourse(prev => ({ ...prev, [courseValue]: selected }));
+    // Clear section selections for unselected faculty
+    setSelectedSectionsByFaculty(prev => {
+      const newState = { ...prev };
+      if (!newState[courseValue]) newState[courseValue] = {};
+      const selectedFacultyValues = selected.map(f => f.value);
+      Object.keys(newState[courseValue]).forEach(faculty => {
+        if (!selectedFacultyValues.includes(faculty)) {
+          delete newState[courseValue][faculty];
+        }
+      });
+      return newState;
+    });
+  };
+
+  const handleSectionChange = (courseValue, faculty, selectedSection) => {
+    setSelectedSectionsByFaculty(prev => ({
+      ...prev,
+      [courseValue]: {
+        ...(prev[courseValue] || {}),
+        [faculty]: selectedSection
+      }
+    }));
+  };
+
+  const handleGenerateRoutine = (useAI) => {
+    setRoutineError("");
+    setRoutineResult(null);
+    setAiFeedback(null);
+    setUsedAI(useAI);
+
+    // Validate that at least two days are selected
+    if (routineDays.length < 2) {
+      setRoutineError("Please select at least two days. Classes typically require two days per week.");
+      return;
+    }
+
+    // Validate commute preference
+    if (useAI && !commutePreference) {
+      setRoutineError("Please select a commute preference (Live Far or Live Near).");
+      return;
+    }
+
+    // Get selected days in uppercase for comparison
+    const selectedDays = routineDays.map(d => d.value.toUpperCase());
+
+    setIsLoading(true);
+
+    const courseFacultyMap = routineCourses.map(course => {
+      const selectedFaculty = selectedFacultyByCourse[course.value] || [];
+      const facultyWithSections = selectedFaculty.map(f => ({
+        value: f.value,
+        section: selectedSectionsByFaculty[course.value]?.[f.value]?.value || null
+      }));
+
+      return {
+        course: course.value,
+        faculty: facultyWithSections.map(f => f.value),
+        sections: Object.fromEntries(
+          facultyWithSections
+            .filter(f => f.section)
+            .map(f => [f.value, f.section])
+        )
+      };
+    });
+
+    axios.post(`${API_BASE}/routine`, {
+      courses: courseFacultyMap,
+      days: selectedDays,
+      times: routineTimes.map(t => t.value),
+      useAI: useAI,
+      commutePreference: commutePreference
+    }).then(res => {
+      setIsLoading(false);
+      
+      // Check for error response from backend
+      if (res.data && res.data.error) {
+        setRoutineError(res.data.error);
+        setRoutineResult(null);
+        setAiFeedback(null);
+        return;
+      }
+
+      let geminiResponse = res.data;
+
+      // Handle potential nested routine structure from backend
+      if (geminiResponse && geminiResponse.routine && Array.isArray(geminiResponse.routine)) {
+        geminiResponse = geminiResponse.routine;
+      } else if (!Array.isArray(geminiResponse)) {
+        geminiResponse = geminiResponse ? [geminiResponse] : [];
+      }
+
+      // Ensure geminiResponse is an array before proceeding
+      if (!Array.isArray(geminiResponse)) {
+        console.error("Unexpected response format from backend:", res.data);
+        setRoutineError('Failed to process routine response from backend.');
+        setRoutineResult(null);
+        setAiFeedback(null);
+        return;
+      }
+
+      // Continue with existing validation for lab and class days
+      const selectedDaysUpper = routineDays.map(d => d.value.toUpperCase());
+      let labDayMismatch = false;
+      let classDayMismatch = false;
+      const mismatchedLabs = [];
+      const mismatchedClasses = [];
+
+      geminiResponse.forEach(section => {
+        const requiredClassDays = section.sectionSchedule?.classSchedules?.map(s => s.day.toUpperCase()) || [];
+        requiredClassDays.forEach(classDayUpper => {
+          if (!selectedDaysUpper.includes(classDayUpper)) {
+            classDayMismatch = true;
+            mismatchedClasses.push(`${section.courseCode} (${classDayUpper})`);
+          }
+        });
+
+        if (section.labSchedules && section.labSchedules.length > 0) {
+          section.labSchedules.forEach(labSched => {
+            const labDayUpper = labSched.day.toUpperCase();
+            if (!selectedDaysUpper.includes(labDayUpper)) {
+              labDayMismatch = true;
+              mismatchedLabs.push(`${section.courseCode} Lab (${labSched.day})`);
+            }
+          });
+        }
+      });
+
+      if (classDayMismatch || labDayMismatch) {
+        let errorMessage = "Cannot generate routine with the selected days:\n\n";
+        if (classDayMismatch) {
+          errorMessage += `- Missing required class day(s) for: ${mismatchedClasses.join(', ')}\n`;
+        }
+        if (labDayMismatch) {
+          errorMessage += `- Missing required lab day(s) for: ${mismatchedLabs.join(', ')}\n`;
+        }
+        errorMessage += "\nPlease select the necessary day(s) for all courses.";
+        setRoutineError(errorMessage);
+        return;
+      }
+
+      setRoutineResult(geminiResponse);
+      if (res.data && res.data.feedback) {
+        setAiFeedback(res.data.feedback);
+      }
+    }).catch(error => {
+      console.error("Error generating routine:", error);
+      setRoutineError('Failed to generate routine. Please try again.');
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  };
+
+  // Custom option component for faculty selection with sections
+  const FacultyOption = ({ data, ...props }) => {
+    const facultyInfo = availableFacultyByCourse[props.selectProps.name]?.[data.value];
+    return (
+      <div {...props.innerProps} style={{ padding: '8px' }}>
+        <div style={{ fontWeight: 'bold' }}>{data.label}</div>
+        {facultyInfo && (
+          <div style={{ fontSize: '0.9em', color: '#666' }}>
+            Available Seats: {facultyInfo.availableSeats} / {facultyInfo.totalSeats}
+            <br />
+            Sections: {facultyInfo.sections.length}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Add loading spinner component
+  const LoadingSpinner = () => (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: '20px'
+    }}>
+      <div style={{
+        width: '40px',
+        height: '40px',
+        border: '4px solid #f3f3f3',
+        borderTop: '4px solid #3498db',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+    </div>
+  );
+
+  // Update the routine result display with transitions
+  const RoutineResult = ({ routineGridRef, onDownloadPNG }) => {
+    if (isLoading) {
+      return <LoadingSpinner />;
+    }
+
+    if (routineError) {
+      console.log("Frontend received error:", routineError);
+      console.log("Error includes 'Exam Conflicts':", routineError.includes('Exam Conflicts'));
+      if (routineError.includes('Exam Conflicts')) {
+        console.log("Rendering ExamConflictMessage with message:", routineError);
+        return <ExamConflictMessage message={routineError} />;
+      }
+      return (
+        <div style={{
+          color: 'red',
+          marginTop: '20px',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          padding: '20px',
+          backgroundColor: '#fff3f3',
+          borderRadius: '4px',
+          border: '1px solid #ffcdd2'
+        }}>
+          {routineError}
+        </div>
+      );
+    }
+
+    if (routineResult && Array.isArray(routineResult)) {
+      return (
+        <div style={{
+          marginTop: "20px",
+          padding: "20px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          opacity: isLoading ? 0.5 : 1,
+          transition: 'opacity 0.3s ease-in-out'
+        }}>
+          <h3 style={{ textAlign: 'center', marginBottom: 24 }}>{usedAI ? 'AI Routine:' : 'Generated Routine:'}</h3>
+          {/* Display Feedback */}
+          {aiFeedback ? (
+            <div className="ai-analysis-container">
+              <div className="ai-result feedback">
+                <b>AI Feedback:</b><br />
+                <span style={{ fontSize: '1.1em', color: '#2e7d32', fontWeight: 600 }}>{aiFeedback.split('\n')[0]}</span>
+                <ul style={{ margin: '10px 0 0 0', padding: 0, listStyle: 'disc inside', color: '#333' }}>
+                  {aiFeedback.split('\n').slice(1).map((line, i) => line && <li key={i}>{line}</li>)}
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="ai-analysis-container">
+              <div className="ai-result feedback" style={{ color: '#888' }}>
+                <b>AI Feedback:</b> <span>No feedback available.</span>
+              </div>
+            </div>
+          )}
+          <CampusDaysDisplay routine={routineResult} />
+          {/* Routine Grid Container with Ref */}
+          <div ref={routineGridRef} style={{ marginTop: "20px" }}>
+            {renderRoutineGrid(routineResult, routineDays.map(d => d.value))}
+          </div>
+          
+          {/* Download Button */}
+          <button 
+            onClick={onDownloadPNG} 
+            style={{
+              marginTop: '20px',
+              padding: '10px 20px',
+              fontSize: '1em',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s ease'
+            }}
+          >
+            Download as PNG
+          </button>
+
+          <ExamSchedule sections={routineResult} />
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // Update the generate button to show loading state
+  const GenerateButton = () => (
+    <button
+      onClick={() => handleGenerateRoutine(false)}
+      disabled={routineCourses.length === 0 || routineDays.length === 0 || isLoading}
+      style={{
+        padding: "10px 20px",
+        fontSize: "16px",
+        backgroundColor: isLoading ? "#cccccc" : "#4CAF50",
+        color: "white",
+        border: "none",
+        borderRadius: "4px",
+        cursor: isLoading ? "not-allowed" : "pointer",
+        transition: 'background-color 0.3s ease',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: '150px'
+      }}
+    >
+      {isLoading ? (
+        <>
+          <div style={{
+            width: '20px',
+            height: '20px',
+            border: '2px solid #ffffff',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            marginRight: '10px',
+            animation: 'spin 1s linear infinite'
+          }} />
+          Generating...
+        </>
+      ) : (
+        'Generate Routine'
+      )}
+    </button>
+  );
+
+  const GenerateAIButton = () => (
+    <button
+      onClick={() => handleGenerateRoutine(true)}
+      disabled={routineCourses.length === 0 || routineDays.length === 0 || isLoading}
+      style={{
+        padding: "10px 20px",
+        fontSize: "16px",
+        backgroundColor: isLoading ? "#cccccc" : "#17a2b8",
+        color: "white",
+        border: "none",
+        borderRadius: "4px",
+        cursor: isLoading ? "not-allowed" : "pointer",
+        transition: 'background-color 0.3s ease',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: '180px',
+        marginLeft: '10px'
+      }}
+    >
+      {isLoading ? (
+        <>
+          <div style={{
+            width: '20px',
+            height: '20px',
+            border: '2px solid #ffffff',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            marginRight: '10px',
+            animation: 'spin 1s linear infinite'
+          }} />
+          Generating...
+        </>
+      ) : (
+        'Use AI for Best Routine'
+      )}
+    </button>
+  );
+
+  return (
+    <div style={{ padding: "20px", textAlign: "center" }}>
+      <h2>Make Routine</h2>
+      <p>Select courses and their faculty, then choose available days and times.</p>
+      {/* Course Selection */}
+      <div style={{ marginBottom: "20px" }}>
+        <label>Courses:</label>
+        <Select
+          isMulti
+          options={courseOptions}
+          value={routineCourses}
+          onChange={handleCourseSelect}
+          placeholder="Select courses..."
+          components={{ Option: CourseOption }}
+          styles={{
+            multiValue: (provided) => ({
+              ...provided,
+              backgroundColor: '#e0f7fa', // Light cyan background
+              borderRadius: '4px',
+              border: '1px solid #b2ebf2'
+            }),
+            multiValueLabel: (provided) => ({
+              ...provided,
+              color: '#004d40' // Dark teal text color
+            }),
+            multiValueRemove: (provided) => ({
+              ...provided,
+              color: '#004d40',
+              ':hover': {
+                backgroundColor: '#b2ebf2',
+                color: '#004d40'
+              }
+            }),
+            option: (provided, state) => ({
+              ...provided,
+              backgroundColor: state.isFocused
+                ? '#e9ecef' // Light grey background on hover (light mode)
+                : state.isSelected
+                  ? '#007bff' // Blue background for selected
+                  : null, // No background for default state
+              color: state.isDisabled
+                ? '#aaa' // Grey text for disabled
+                : state.isSelected
+                  ? 'white' // White text for selected
+                  : 'black', // Default black text
+              cursor: state.isDisabled ? 'not-allowed' : 'pointer',
+              textDecoration: data => data.isDisabled ? 'line-through' : 'none' // Line-through for disabled
+            })
+          }}
+        />
+      </div>
+      {/* Faculty Selection for Each Course */}
+      {routineCourses.map(course => {
+        const facultyOptions = Object.entries(availableFacultyByCourse[course.value] || {})
+          .filter(([_, info]) => info.availableSeats > 0)
+          .map(([faculty, info]) => ({ value: faculty, label: faculty, info }));
+        const selectedFaculty = selectedFacultyByCourse[course.value] || [];
+
+        return (
+          <div key={course.value} style={{ marginBottom: "10px", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}>
+            <h3 style={{ margin: "0 0 6px 0" }}>{course.label}</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <label style={{ minWidth: "70px", fontSize: "0.9em" }}>Faculty:</label>
+                <Select
+                  isMulti
+                  name={course.value}
+                  options={facultyOptions}
+                  value={selectedFaculty}
+                  onChange={(selected) => handleFacultyChange(course.value, selected)}
+                  placeholder="Search and select faculty..."
+                  isDisabled={!availableFacultyByCourse[course.value] || facultyOptions.length === 0}
+                  components={{ Option: FacultyOption }}
+                  styles={{
+                    option: (provided, state) => ({
+                      ...provided,
+                      backgroundColor: state.isSelected ? '#4CAF50' : state.isFocused ? '#e6f3e6' : 'white',
+                      color: state.isSelected ? 'white' : 'black',
+                      cursor: 'pointer',
+                      padding: '4px 8px'
+                    }),
+                    menu: (provided) => ({ ...provided, zIndex: 9999 }),
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: '30px',
+                      padding: '0 4px'
+                    }),
+                    multiValue: (provided) => ({
+                      ...provided,
+                      backgroundColor: '#e0f7fa', // Light cyan background
+                      borderRadius: '4px',
+                      border: '1px solid #b2ebf2'
+                    }),
+                    multiValueLabel: (provided) => ({
+                      ...provided,
+                      color: '#004d40' // Dark teal text color
+                    }),
+                    multiValueRemove: (provided) => ({
+                      ...provided,
+                      color: '#004d40',
+                      ':hover': {
+                        backgroundColor: '#b2ebf2',
+                        color: '#004d40'
+                      }
+                    })
+                  }}
+                  noOptionsMessage={() => "No faculty available with seats"}
+                  isClearable={true}
+                />
+              </div>
+              
+              {/* Optional Section Selection for each selected faculty */}
+              {selectedFaculty.map(faculty => {
+                const facultyInfo = availableFacultyByCourse[course.value]?.[faculty.value];
+                if (!facultyInfo) return null;
+
+                const sectionOptions = facultyInfo.sections.map(section => ({
+                  value: section.sectionName,
+                  label: `${section.sectionName} (${section.capacity - section.consumedSeat} seats)`,
+                  section: section
+                }));
+
+                return (
+                  <div key={faculty.value} style={{ marginLeft: "85px", marginTop: "2px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <label style={{ fontSize: "0.8em", color: "#666" }}>
+                        {faculty.value} Sections (Optional):
+                      </label>
+                      <Select
+                        value={selectedSectionsByFaculty[course.value]?.[faculty.value]}
+                        onChange={(selected) => handleSectionChange(course.value, faculty.value, selected)}
+                        options={sectionOptions}
+                        placeholder="Select section (optional)..."
+                        isClearable={true}
+                        styles={{
+                          container: (provided) => ({
+                            ...provided,
+                            width: '250px'
+                          }),
+                          control: (provided) => ({
+                            ...provided,
+                            minHeight: '26px',
+                            padding: '0 3px'
+                          }),
+                          option: (provided, state) => ({
+                            ...provided,
+                            padding: '1px 4px'
+                          }),
+                          multiValue: (provided) => ({
+                            ...provided,
+                            backgroundColor: '#e0f7fa', // Light cyan background
+                            borderRadius: '4px',
+                            border: '1px solid #b2ebf2'
+                          }),
+                          multiValueLabel: (provided) => ({
+                            ...provided,
+                            color: '#004d40' // Dark teal text color
+                          }),
+                          multiValueRemove: (provided) => ({
+                            ...provided,
+                            color: '#004d40',
+                            ':hover': {
+                              backgroundColor: '#b2ebf2',
+                              color: '#004d40'
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {/* Days Selection */}
+      <div style={{ marginBottom: "20px" }}>
+        <label>Available Days:</label>
+        <Select
+          isMulti
+          options={DAYS.map(d => ({ value: d, label: d }))}
+          value={routineDays}
+          onChange={setRoutineDays}
+          placeholder="Select days..."
+          styles={{
+            multiValue: (provided) => ({
+              ...provided,
+              backgroundColor: '#e0f7fa', // Light cyan background
+              borderRadius: '4px',
+              border: '1px solid #b2ebf2'
+            }),
+            multiValueLabel: (provided) => ({
+              ...provided,
+              color: '#004d40' // Dark teal text color
+            }),
+            multiValueRemove: (provided) => ({
+              ...provided,
+              color: '#004d40',
+              ':hover': {
+                backgroundColor: '#b2ebf2',
+                color: '#004d40'
+              }
+            })
+          }}
+        />
+      </div>
+      {/* Time Selection */}
+      <div style={{ marginBottom: "20px" }}>
+        <label>Available Times:</label>
+        <Select
+          isMulti
+          options={TIME_SLOTS}
+          value={routineTimes}
+          onChange={setRoutineTimes}
+          placeholder="Select available times (Bangladesh Time)..."
+          styles={{
+            multiValue: (provided) => ({
+              ...provided,
+              backgroundColor: '#e0f7fa', // Light cyan background
+              borderRadius: '4px',
+              border: '1px solid #b2ebf2'
+            }),
+            multiValueLabel: (provided) => ({
+              ...provided,
+              color: '#004d40' // Dark teal text color
+            }),
+            multiValueRemove: (provided) => ({
+              ...provided,
+              color: '#004d40',
+              ':hover': {
+                backgroundColor: '#b2ebf2',
+                color: '#004d40'
+              }
+            })
+          }}
+        />
+      </div>
+      {/* Commute Preference Selection */}
+      <div style={{ marginBottom: "20px", textAlign: "left" }}>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", color: "#555" }}>Commute Preference:</label>
+        <div>
+          <label style={{ marginRight: "15px" }}>
+            <input
+              type="radio"
+              value="far"
+              checked={commutePreference === "far"}
+              onChange={(e) => setCommutePreference(e.target.value)}
+              style={{ marginRight: "5px" }}
+            />
+            Live Far (More classes on same day)
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="near"
+              checked={commutePreference === "near"}
+              onChange={(e) => setCommutePreference(e.target.value)}
+              style={{ marginRight: "5px" }}
+            />
+            Live Near (Spread out classes)
+          </label>
+        </div>
+      </div>
+      {/* Summary of selections - always render strings only */}
+      <div style={{ marginBottom: "20px", color: "#555" }}>
+        <div>
+          <b>Selected Courses:</b> {Array.isArray(routineCourses) && routineCourses.length ? routineCourses.map(c => (typeof c === 'object' ? (c.label || c.value || '') : String(c))).join(', ') : "None"}
+        </div>
+        <div>
+          <b>Selected Faculty:</b> {routineFaculty && typeof routineFaculty === 'object' ? (routineFaculty.label || routineFaculty.value || '') : (routineFaculty || "None")}
+        </div>
+        <div>
+          <b>Selected Days:</b> {Array.isArray(routineDays) && routineDays.length ? routineDays.map(d => (typeof d === 'object' ? (d.label || d.value || '') : String(d))).join(', ') : "None"}
+        </div>
+         {Object.keys(selectedFacultyByCourse).length > 0 && (
+           <div>
+             <b>Selected Faculty:</b> {
+               Object.entries(selectedFacultyByCourse)
+                 .map(([courseCode, faculties]) => 
+                  `${courseCode}: ${faculties.map(f => f && typeof f === 'object' ? (f.label || f.value || '') : String(f)).join(', ')}`
+                 )
+                 .join('; ')
+             }
+           </div>
+         )}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "20px" }}>
+        <GenerateButton />
+        <GenerateAIButton />
+        </div>
+      <div style={{ fontSize: "0.9em", color: "#555", marginTop: "10px" }}>
+        Using the AI for routine generation may provide a better combination of courses and times,
+        and can offer feedback on the generated routine.
+      </div>
+      <RoutineResult routineGridRef={routineGridRef} onDownloadPNG={handleDownloadPNG} />
+    </div>
+  );
+};
+
+function App() {
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [routineCourses, setRoutineCourses] = useState([]);
+  const [routineFaculty, setRoutineFaculty] = useState(null);
+  const [routineDays, setRoutineDays] = useState(DAYS.map(d => ({ value: d, label: d })));
+  const [routineFacultyOptions, setRoutineFacultyOptions] = useState([]);
+  const [routineResult, setRoutineResult] = useState(null);
+  const [availableFacultyByCourse, setAvailableFacultyByCourse] = useState({});
+  const [selectedFacultyByCourse, setSelectedFacultyByCourse] = useState({});
+  const [routineTimes, setRoutineTimes] = useState(TIME_SLOTS);
+  const [routineError, setRoutineError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState(null);
+  const [commutePreference, setCommutePreference] = useState("");
+  const [selectedSectionsByFaculty, setSelectedSectionsByFaculty] = useState({});
+  const [usedAI, setUsedAI] = useState(false);
+  const [courseOptions, setCourseOptions] = useState([]);
+  const routineGridRef = useRef(null); // Create a ref for the routine grid
+
+  // Function to handle PNG download
+  const handleDownloadPNG = () => {
+    if (routineGridRef.current) {
+      html2canvas(routineGridRef.current, { scale: 2 }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'routine.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+  };
+
+  // Fetch all courses on mount
+  useEffect(() => {
+    axios.get(`${API_BASE}/courses`).then(res => {
+      setCourses(res.data);
+      // Prepare options for the main course select, including disabled state
+      const options = res.data.map(course => ({
+        value: course.code,
+        label: course.code,
+        isDisabled: course.totalAvailableSeats <= 0,
+        totalAvailableSeats: course.totalAvailableSeats
+      }));
+      setCourseOptions(options);
+    });
+  }, []);
+
+  // Fetch course details when a course is selected
+  useEffect(() => {
+    if (selectedCourse) {
+      axios.get(`${API_BASE}/course_details?course=${selectedCourse.value}`)
+        .then(res => setSections(res.data));
+    } else {
+      setSections([]);
+    }
+  }, [selectedCourse]);
+
+  // Fetch faculty options when routine page is shown
+  useEffect(() => {
+    if (selectedCourse) {
+      axios.get(`${API_BASE}/course_details?course=${selectedCourse.value}`)
+          .then(res => {
+            const faculties = res.data.map(section => section.faculties).filter(Boolean);
+            setRoutineFacultyOptions([...new Set(faculties)]);
+          });
+    }
+  }, [selectedCourse]);
+
+  useEffect(() => {
+    if (routineCourses.length > 0) {
+      const fetchFaculties = async () => {
+        const allFaculties = new Set();
+        for (const course of routineCourses) {
+          try {
+            const res = await axios.get(`${API_BASE}/course_details?course=${course.value}`);
+            const faculties = res.data.map(section => section.faculties).filter(Boolean);
+            faculties.forEach(f => allFaculties.add(f));
+          } catch (error) {}
+        }
+        setRoutineFacultyOptions([...allFaculties]);
+      };
+      fetchFaculties();
+    }
+  }, [routineCourses]);
+
+  // State to manage active tab
+  const [activeTab, setActiveTab] = useState('seat-status'); // Default to Seat Status
+
+  return (
+    <div className="app-container">
+      <AnimatedGridPattern
+        numSquares={30}
+        maxOpacity={0.3}
+        duration={3}
+        repeatDelay={1}
+        className="animated-grid"
+      />
+      <div className="content-container">
+        <div className="header">
+          <h1 className="usis-title">RoutinEZ</h1>
+        </div>
+        <ul className="nav nav-tabs mb-4">
+          <li className="nav-item">
+            <a
+              className={`nav-link ${activeTab === 'seat-status' ? 'active' : ''}`}
+              href="#seat-status"
+              onClick={(e) => { e.preventDefault(); setActiveTab('seat-status'); }}
+            >
+              Seat Status
+            </a>
+          </li>
+          <li className="nav-item">
+            <a
+              className={`nav-link ${activeTab === 'make-routine' ? 'active' : ''}`}
+              href="#make-routine"
+              onClick={(e) => { e.preventDefault(); setActiveTab('make-routine'); }}
+            >
+              Make Routine
+            </a>
+          </li>
+        </ul>
+
+        <div className="tab-content">
+          <div className={`tab-pane fade ${activeTab === 'seat-status' ? 'show active' : ''}`} id="seat-status">
+            <SeatStatusPage courses={courses} />
+          </div>
+          <div className={`tab-pane fade ${activeTab === 'make-routine' ? 'show active' : ''}`} id="make-routine">
+            <MakeRoutinePage />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
