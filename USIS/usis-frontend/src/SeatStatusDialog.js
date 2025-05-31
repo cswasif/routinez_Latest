@@ -182,7 +182,7 @@ const SeatStatusDialog = () => {
           ) : !selected && searchTerm === '' ? (
             <InfoMessage text="Search or select a course from the list above to see seat status." />
           ) : sections.length === 0 && !loading && (selected || searchTerm !== '') ? (
-             <InfoMessage text="No sections found for this course." />
+             <InfoMessage text="No seat available for this course." />
           ) : hasAvailableSeats ? (
             <div className="min-w-[900px]">
               <Table>

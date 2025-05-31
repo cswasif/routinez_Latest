@@ -268,7 +268,7 @@ const SeatStatusPage = ({ courses }) => {
         <div className="seat-status-message info">Please select a course to view seat status.</div>
       )}
       {selectedCourse && !isLoadingSections && sections.length === 0 && (
-        <div className="seat-status-message warning">No sections found with available seats for {selectedCourse.label}.</div>
+        <div className="seat-status-message warning">No seat available for this course.</div>
       )}
       {selectedCourse && sections.length > 0 && (
         <div className="seat-status-table-wrapper">
@@ -1339,12 +1339,12 @@ const MakeRoutinePage = () => {
         }}>
           {/* Display selected course tags */}
           {routineCourses.map(course => (
-            <span key={course.value} style={{ backgroundColor: '#e0f7fa', color: '#004d40', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
+            <span key={course.value} style={{ backgroundColor: '#f0f0f0', color: '#555555', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
               {course.label}
               <button
                 type="button"
                 onClick={() => handleRemoveCourseTag(course.value)}
-                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#004d40', padding: 0 }}
+                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#555555', padding: 0 }}
               >
                 &times;
               </button>
@@ -1426,20 +1426,20 @@ const MakeRoutinePage = () => {
                     }),
                     multiValue: (provided) => ({
                       ...provided,
-                      backgroundColor: '#e0f7fa', // Light cyan background
+                      backgroundColor: '#f0f0f0', // Light gray background
                       borderRadius: '4px',
-                      border: '1px solid #b2ebf2'
+                      border: '1px solid #cccccc' // Subtle gray border
                     }),
                     multiValueLabel: (provided) => ({
                       ...provided,
-                      color: '#004d40' // Dark teal text color
+                      color: '#555555' // Dark gray text color
                     }),
                     multiValueRemove: (provided) => ({
                       ...provided,
-                      color: '#004d40',
+                      color: '#555555', // Dark gray color for remove button
                       ':hover': {
-                        backgroundColor: '#b2ebf2',
-                        color: '#004d40'
+                        backgroundColor: '#cccccc', // Darker gray on hover
+                        color: '#333333' // Even darker gray text on hover
                       }
                     })
                   }}
@@ -1528,12 +1528,12 @@ const MakeRoutinePage = () => {
         }}>
           {/* Display selected day tags */}
           {routineDays.map(day => (
-            <span key={day.value} style={{ backgroundColor: '#e0f7fa', color: '#004d40', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
+            <span key={day.value} style={{ backgroundColor: '#f0f0f0', color: '#555555', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
               {day.label}
               <button
                 type="button"
                 onClick={() => handleRemoveDayTag(day.value)}
-                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#004d40', padding: 0 }}
+                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#555555', padding: 0 }}
               >
                 &times;
               </button>
@@ -1581,12 +1581,12 @@ const MakeRoutinePage = () => {
         }}>
           {/* Display selected time tags */}
           {routineTimes.map(time => (
-            <span key={time.value} style={{ backgroundColor: '#e0f7fa', color: '#004d40', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
+            <span key={time.value} style={{ backgroundColor: '#f0f0f0', color: '#555555', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
               {time.label}
               <button
                 type="button"
                 onClick={() => handleRemoveTimeTag(time.value)}
-                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#004d40', padding: 0 }}
+                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#555555', padding: 0 }}
               >
                 &times;
               </button>
