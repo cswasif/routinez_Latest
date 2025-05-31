@@ -122,4 +122,56 @@
 
 .tab-pane.show.active {
   display: block;
+}
+
+/* Routine Table Styling (Matching Seat Status Table) */
+.routine-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 0.85em; /* Further reduced font size */
+}
+
+.routine-table th,
+.routine-table td {
+  border: 1px solid #ddd;
+  padding: 3px 5px; /* Further reduced padding */
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word; /* Ensure text wraps */
+}
+
+.routine-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.routine-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.routine-table tbody tr:hover {
+  background-color: #e9e9e9;
+}
+
+.routine-table td div {
+    margin-bottom: 0.5px; /* Further reduced margin */
+}
+
+.routine-table .class-schedule, .routine-table .lab-schedule {
+    margin-bottom: 1px; /* Further reduced margin */
+    padding: 3px; /* Further reduced padding within blocks */
+}
+
+.routine-table .class-schedule div, .routine-table .lab-schedule div {
+    font-size: 0.8em; /* Further reduced font within blocks */
+}
+
+.routine-table .schedule-day {
+    font-weight: bold;
+}
+
+.routine-table .schedule-room {
+    color: #6c757d;
+    font-size: 0.8em; /* Consistent smaller font */
 } 

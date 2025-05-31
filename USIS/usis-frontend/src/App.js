@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import html2canvas from 'html2canvas';
 import { Waves } from "./components/ui/waves-background";
 import AnimatedGridPattern from "./components/ui/animated-grid-pattern";
+import SeatStatusDialog from "./SeatStatusDialog";
 
 const API_BASE = "http://localhost:5000/api";
 
@@ -38,6 +39,9 @@ function renderRoutineGrid(sections, selectedDays) {
   console.log("Sections received:", sections);
   console.log("Selected days:", selectedDays);
   
+  // Helper to get abbreviated day name
+  const getAbbreviatedDay = (day) => day.substring(0, 3);
+
   // Build a lookup: { [day]: { [timeSlotValue]: [entries, ...] } }
   const grid = {};
   for (const day of DAYS) {
@@ -142,7 +146,7 @@ function renderRoutineGrid(sections, selectedDays) {
       <thead>
         <tr>
           <th>Time/Day</th>
-          {selectedDays.map(day => <th key={day}>{day}</th>)}
+          {selectedDays.map(day => <th key={day}>{getAbbreviatedDay(day)}</th>)}
         </tr>
       </thead>
       <tbody>
@@ -631,7 +635,7 @@ const CourseOption = ({ innerRef, innerProps, data, isSelected }) => (
 const MakeRoutinePage = () => {
   const [routineCourses, setRoutineCourses] = useState([]);
   const [routineFaculty, setRoutineFaculty] = useState(null);
-  const [routineDays, setRoutineDays] = useState(DAYS.map(d => ({ value: d, label: d })));
+  const [routineDays, setRoutineDays] = useState(DAYS.map(d => ({ value: d, label: d }))); // Reverted to include all days
   const [routineFacultyOptions, setRoutineFacultyOptions] = useState([]);
   const [routineResult, setRoutineResult] = useState(null);
   const [availableFacultyByCourse, setAvailableFacultyByCourse] = useState({});
@@ -644,7 +648,18 @@ const MakeRoutinePage = () => {
   const [selectedSectionsByFaculty, setSelectedSectionsByFaculty] = useState({});
   const [usedAI, setUsedAI] = useState(false);
   const [courseOptions, setCourseOptions] = useState([]);
-  const routineGridRef = useRef(null); // Create a ref for the routine grid
+  const [courseSearchTerm, setCourseSearchTerm] = useState('');
+  const [filteredCourseOptions, setFilteredCourseOptions] = useState([]);
+  const [isCourseSuggestionsOpen, setIsCourseSuggestionsOpen] = useState(false);
+  const routineGridRef = useRef(null);
+
+  const [daySearchTerm, setDaySearchTerm] = useState(''); // Input value for day search
+  const [filteredDayOptions, setFilteredDayOptions] = useState(DAYS.map(d => ({ value: d, label: d }))); // Filtered day suggestions
+  const [isDaySuggestionsOpen, setIsDaySuggestionsOpen] = useState(false); // Day suggestions list visibility
+
+  const [timeSearchTerm, setTimeSearchTerm] = useState(''); // Input value for time search
+  const [filteredTimeOptions, setFilteredTimeOptions] = useState(TIME_SLOTS); // Filtered time suggestions
+  const [isTimeSuggestionsOpen, setIsTimeSuggestionsOpen] = useState(false); // Time suggestions list visibility
 
   // Function to handle PNG download
   const handleDownloadPNG = () => {
@@ -667,7 +682,10 @@ const MakeRoutinePage = () => {
         isDisabled: course.totalAvailableSeats <= 0,
         totalAvailableSeats: course.totalAvailableSeats
       }));
+      // Sort options alphabetically
+      options.sort((a, b) => a.label.localeCompare(b.label));
       setCourseOptions(options);
+      setFilteredCourseOptions(options);
     });
   }, []);
 
@@ -871,6 +889,248 @@ const MakeRoutinePage = () => {
     });
   };
 
+  // New handler for course input change
+  const handleCourseInputChange = (event) => {
+    const value = event.target.value;
+    setCourseSearchTerm(value);
+
+    if (value === '') {
+      // If input is cleared, show all courses that are not already selected
+      setFilteredCourseOptions(courseOptions.filter(option => !routineCourses.some(rc => rc.value === option.value)));
+    } else {
+      // Filter courses based on input value (case-insensitive) and exclude already selected ones
+      const filtered = courseOptions.filter(option =>
+        option.label.toLowerCase().includes(value.toLowerCase()) && !routineCourses.some(rc => rc.value === option.value)
+      );
+      setFilteredCourseOptions(filtered);
+    }
+
+    // Open suggestions if there is input or available options
+     setIsCourseSuggestionsOpen(true);
+  };
+
+  // New handler for selecting a course from suggestions
+  const handleCourseSuggestionSelect = async (option) => {
+    // Prevent adding if the course is disabled (no seats available)
+    if (option.isDisabled) {
+      // Optionally show a temporary message to the user
+      alert(`Cannot add ${option.label}: No seats available.`);
+      setCourseSearchTerm(''); // Clear input after attempted selection
+      setIsCourseSuggestionsOpen(false); // Close suggestions
+      return;
+    }
+
+    // Add the selected course to the routineCourses state if not already present
+    if (!routineCourses.some(course => course.value === option.value)) {
+        const updatedCourses = [...routineCourses, option];
+        setRoutineCourses(updatedCourses);
+
+        // *** Add faculty fetching logic here ***
+        try {
+            const res = await axios.get(`${API_BASE}/course_details?course=${option.value}`);
+            const facultySections = {};
+            res.data.forEach(section => {
+              if (section.faculties) {
+                const availableSeats = section.capacity - section.consumedSeat;
+                if (availableSeats > 0) {
+                  if (!facultySections[section.faculties]) {
+                    facultySections[section.faculties] = {
+                      sections: [],
+                      totalSeats: 0,
+                      availableSeats: 0
+                    };
+                  }
+                  facultySections[section.faculties].sections.push(section);
+                  facultySections[section.faculties].totalSeats += section.capacity;
+                  facultySections[section.faculties].availableSeats += availableSeats;
+                }
+              }
+            });
+            setAvailableFacultyByCourse(prev => ({ ...prev, [option.value]: facultySections }));
+          } catch (error) {
+              console.error(`Error fetching faculty for ${option.value}:`, error);
+          }
+        // *** End faculty fetching logic ***
+
+    }
+    setCourseSearchTerm(''); // Clear input after selection
+    // Update suggestions to exclude the newly selected course
+    setFilteredCourseOptions(prevOptions => prevOptions.filter(opt => opt.value !== option.value));
+    setIsCourseSuggestionsOpen(false); // Close suggestions after selection
+  };
+
+  // New handler for removing a course tag
+  const handleRemoveCourseTag = (courseValue) => {
+      setRoutineCourses(routineCourses.filter(course => course.value !== courseValue));
+      // When a tag is removed, add the course back to filtered options if search term is empty
+      if (courseSearchTerm === '') {
+        const removedCourse = courseOptions.find(opt => opt.value === courseValue);
+        if(removedCourse) {
+            setFilteredCourseOptions([...filteredCourseOptions, removedCourse].sort((a, b) => a.label.localeCompare(b.label)));
+        }
+      } else {
+           // If there's a search term, re-filter based on current input
+            const filtered = courseOptions.filter(option =>
+                option.label.toLowerCase().includes(courseSearchTerm.toLowerCase()) && !routineCourses.some(rc => rc.value === option.value && rc.value !== courseValue) // Exclude the one just removed from the exclusion list
+            );
+            setFilteredCourseOptions(filtered);
+      }
+      // Also remove corresponding faculty and section selections for the removed course
+        setSelectedFacultyByCourse(prev => {
+            const newState = { ...prev };
+            delete newState[courseValue];
+            return newState;
+        });
+        setSelectedSectionsByFaculty(prev => {
+            const newState = { ...prev };
+            delete newState[courseValue];
+            return newState;
+        });
+  };
+
+  // New handlers for input focus and blur
+  const handleCourseInputFocus = () => {
+      // Show suggestions on focus, filtered to exclude selected courses
+      setFilteredCourseOptions(courseOptions.filter(option => !routineCourses.some(rc => rc.value === option.value)));
+      setIsCourseSuggestionsOpen(true);
+  };
+
+  const handleCourseInputBlur = () => {
+      // Delay hiding suggestions to allow click on suggestion item
+      setTimeout(() => {
+          setIsCourseSuggestionsOpen(false);
+          setCourseSearchTerm(''); // Clear input on blur
+      }, 200);
+  };
+
+  // New handler for day input change
+  const handleDayInputChange = (event) => {
+    const value = event.target.value;
+    setDaySearchTerm(value);
+
+    if (value === '') {
+        // If input is cleared, show all days that are not already selected
+        setFilteredDayOptions(DAYS.map(d => ({ value: d, label: d })).filter(option => !routineDays.some(rd => rd.value === option.value)));
+    } else {
+        // Filter days based on input value (case-insensitive) and exclude already selected ones
+        const filtered = DAYS.map(d => ({ value: d, label: d })).filter(option =>
+            option.label.toLowerCase().includes(value.toLowerCase()) && !routineDays.some(rd => rd.value === option.value)
+        );
+        setFilteredDayOptions(filtered);
+    }
+
+    // Open suggestions if there is input or available options
+    setIsDaySuggestionsOpen(true);
+  };
+
+  // New handler for selecting a day from suggestions
+  const handleDaySuggestionSelect = (option) => {
+      // Add the selected day to the routineDays state if not already present
+      if (!routineDays.some(day => day.value === option.value)) {
+          setRoutineDays([...routineDays, option]);
+      }
+      setDaySearchTerm(''); // Clear input after selection
+      setFilteredDayOptions(DAYS.map(d => ({ value: d, label: d })).filter(opt => !routineDays.some(rd => rd.value === opt.value && opt.value !== option.value))); // Update suggestions
+      setIsDaySuggestionsOpen(false); // Close suggestions after selection
+  };
+
+  // New handler for removing a day tag
+  const handleRemoveDayTag = (dayValue) => {
+      setRoutineDays(routineDays.filter(day => day.value !== dayValue));
+       // When a tag is removed, add the day back to filtered options if search term is empty
+      if (daySearchTerm === '') {
+        const removedDay = DAYS.find(day => day === dayValue);
+        if(removedDay) {
+            setFilteredDayOptions([...filteredDayOptions, {value: removedDay, label: removedDay}].sort((a, b) => a.label.localeCompare(b.label)));
+        }
+      } else {
+           // If there's a search term, re-filter based on current input
+            const filtered = DAYS.map(d => ({ value: d, label: d })).filter(option =>
+                option.label.toLowerCase().includes(daySearchTerm.toLowerCase()) && !routineDays.some(rd => rd.value === option.value && rd.value !== dayValue) // Exclude the one just removed from the exclusion list
+            );
+            setFilteredDayOptions(filtered);
+      }
+  };
+
+   // New handlers for day input focus and blur
+  const handleDayInputFocus = () => {
+      // Show suggestions on focus, filtered to exclude selected days
+      setFilteredDayOptions(DAYS.map(d => ({ value: d, label: d })).filter(option => !routineDays.some(rd => rd.value === option.value)));
+      setIsDaySuggestionsOpen(true);
+  };
+
+  const handleDayInputBlur = () => {
+      // Delay hiding suggestions to allow click on suggestion item
+      setTimeout(() => {
+          setIsDaySuggestionsOpen(false);
+          setDaySearchTerm(''); // Clear input on blur
+      }, 200);
+  };
+
+  // New handler for time input change
+  const handleTimeInputChange = (event) => {
+    const value = event.target.value;
+    setTimeSearchTerm(value);
+
+    if (value === '') {
+        // If input is cleared, show all times that are not already selected
+        setFilteredTimeOptions(TIME_SLOTS.filter(option => !routineTimes.some(rt => rt.value === option.value)));
+    } else {
+        // Filter times based on input value (case-insensitive) and exclude already selected ones
+        const filtered = TIME_SLOTS.filter(option =>
+            option.label.toLowerCase().includes(value.toLowerCase()) && !routineTimes.some(rt => rt.value === option.value)
+        );
+        setFilteredTimeOptions(filtered);
+    }
+
+    // Open suggestions if there is input or available options
+    setIsTimeSuggestionsOpen(true);
+  };
+
+  // New handler for selecting a time from suggestions
+  const handleTimeSuggestionSelect = (option) => {
+      // Add the selected time to the routineTimes state if not already present
+      if (!routineTimes.some(time => time.value === option.value)) {
+          setRoutineTimes([...routineTimes, option]);
+      }
+      setTimeSearchTerm(''); // Clear input after selection
+      setFilteredTimeOptions(TIME_SLOTS.filter(opt => !routineTimes.some(rt => rt.value === opt.value && opt.value !== option.value))); // Update suggestions
+      setIsTimeSuggestionsOpen(false); // Close suggestions after selection
+  };
+
+  // New handler for removing a time tag
+  const handleRemoveTimeTag = (timeValue) => {
+      setRoutineTimes(routineTimes.filter(time => time.value !== timeValue));
+       // When a tag is removed, add the time back to filtered options if search term is empty
+      if (timeSearchTerm === '') {
+        const removedTime = TIME_SLOTS.find(opt => opt.value === timeValue);
+        if(removedTime) {
+            setFilteredTimeOptions([...filteredTimeOptions, removedTime].sort((a, b) => a.label.localeCompare(b.label)));
+        }
+      } else {
+           // If there's a search term, re-filter based on current input
+            const filtered = TIME_SLOTS.filter(option =>
+                option.label.toLowerCase().includes(timeSearchTerm.toLowerCase()) && !routineTimes.some(rt => rt.value === option.value && rt.value !== timeValue) // Exclude the one just removed from the exclusion list
+            );
+            setFilteredTimeOptions(filtered);
+      }
+  };
+
+   // New handlers for time input focus and blur
+  const handleTimeInputFocus = () => {
+      // Show suggestions on focus, filtered to exclude selected times
+      setFilteredTimeOptions(TIME_SLOTS.filter(option => !routineTimes.some(rt => rt.value === option.value)));
+      setIsTimeSuggestionsOpen(true);
+  };
+
+  const handleTimeInputBlur = () => {
+      // Delay hiding suggestions to allow click on suggestion item
+      setTimeout(() => {
+          setIsTimeSuggestionsOpen(false);
+          setTimeSearchTerm(''); // Clear input on blur
+      }, 200);
+  };
+
   // Custom option component for faculty selection with sections
   const FacultyOption = ({ data, ...props }) => {
     const facultyInfo = availableFacultyByCourse[props.selectProps.name]?.[data.value];
@@ -1013,29 +1273,20 @@ const MakeRoutinePage = () => {
       style={{
         padding: "10px 20px",
         fontSize: "16px",
-        backgroundColor: isLoading ? "#cccccc" : "#4CAF50",
-        color: "white",
-        border: "none",
+        backgroundColor: isLoading ? "#f0f0f0" : "#ffffff", // White background
+        color: isLoading ? "#aaaaaa" : "#333333", // Dark text color
+        border: "1px solid #cccccc", // Subtle gray border
         borderRadius: "4px",
         cursor: isLoading ? "not-allowed" : "pointer",
-        transition: 'background-color 0.3s ease',
+        transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         minWidth: '150px'
       }}
     >
-      {isLoading ? (
-        <>
-          <div style={{
-            width: '20px',
-            height: '20px',
-            border: '2px solid #ffffff',
-            borderTop: '2px solid transparent',
-            borderRadius: '50%',
-            marginRight: '10px',
-            animation: 'spin 1s linear infinite'
-          }} />
+      {isLoading && !usedAI ? (
+         <>
           Generating...
         </>
       ) : (
@@ -1046,39 +1297,25 @@ const MakeRoutinePage = () => {
 
   const GenerateAIButton = () => (
     <button
-      onClick={() => handleGenerateRoutine(true)}
-      disabled={routineCourses.length === 0 || routineDays.length === 0 || isLoading}
-      style={{
-        padding: "10px 20px",
-        fontSize: "16px",
-        backgroundColor: isLoading ? "#cccccc" : "#17a2b8",
-        color: "white",
-        border: "none",
-        borderRadius: "4px",
-        cursor: isLoading ? "not-allowed" : "pointer",
-        transition: 'background-color 0.3s ease',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: '180px',
-        marginLeft: '10px'
+      onClick={() => {
+        // Toggle the AI state first
+        setUsedAI(prevUsedAI => {
+          const newUsedAI = !prevUsedAI;
+          // Clear previous results and errors when toggling AI or regenerating
+          setRoutineResult(null);
+          setRoutineError(null);
+          setAiFeedback(null);
+          // Trigger routine generation with the new AI state
+          handleGenerateRoutine(newUsedAI);
+          return newUsedAI;
+        });
       }}
+      className="text-black border border-gray-400 px-4 py-2 rounded ml-2"
     >
       {isLoading ? (
-        <>
-          <div style={{
-            width: '20px',
-            height: '20px',
-            border: '2px solid #ffffff',
-            borderTop: '2px solid transparent',
-            borderRadius: '50%',
-            marginRight: '10px',
-            animation: 'spin 1s linear infinite'
-          }} />
-          Generating...
-        </>
+         usedAI ? "Generating with AI..." : "Generating..." // Show appropriate loading text
       ) : (
-        'Use AI for Best Routine'
+         usedAI ? "Using AI for Best Routine" : "Use AI for Best Routine"
       )}
     </button>
   );
@@ -1087,52 +1324,69 @@ const MakeRoutinePage = () => {
     <div style={{ padding: "20px", textAlign: "center" }}>
       <h2>Make Routine</h2>
       <p>Select courses and their faculty, then choose available days and times.</p>
-      {/* Course Selection */}
-      <div style={{ marginBottom: "20px" }}>
-        <label>Courses:</label>
-        <Select
-          isMulti
-          options={courseOptions}
-          value={routineCourses}
-          onChange={handleCourseSelect}
-          placeholder="Select courses..."
-          components={{ Option: CourseOption }}
-          styles={{
-            multiValue: (provided) => ({
-              ...provided,
-              backgroundColor: '#e0f7fa', // Light cyan background
-              borderRadius: '4px',
-              border: '1px solid #b2ebf2'
-            }),
-            multiValueLabel: (provided) => ({
-              ...provided,
-              color: '#004d40' // Dark teal text color
-            }),
-            multiValueRemove: (provided) => ({
-              ...provided,
-              color: '#004d40',
-              ':hover': {
-                backgroundColor: '#b2ebf2',
-                color: '#004d40'
-              }
-            }),
-            option: (provided, state) => ({
-              ...provided,
-              backgroundColor: state.isFocused
-                ? '#e9ecef' // Light grey background on hover (light mode)
-                : state.isSelected
-                  ? '#007bff' // Blue background for selected
-                  : null, // No background for default state
-              color: state.isDisabled
-                ? '#aaa' // Grey text for disabled
-                : state.isSelected
-                  ? 'white' // White text for selected
-                  : 'black', // Default black text
-              cursor: state.isDisabled ? 'not-allowed' : 'pointer',
-              textDecoration: data => data.isDisabled ? 'line-through' : 'none' // Line-through for disabled
-            })
-          }}
-        />
+      {/* Course Selection with Autocomplete and Tags */}
+      <div style={{ marginBottom: "20px", position: "relative", textAlign: "left" }}>
+        <label style={{ display: "block", marginBottom: "5px" }}>Courses:</label>
+        <div style={{ 
+          display: "flex", 
+          flexWrap: "wrap", 
+          alignItems: "center", 
+          border: "1px solid #e0e0e0", // Subtle border
+          borderRadius: "8px", // Rounded corners
+          padding: "8px 12px", // Internal padding
+          backgroundColor: "#fff", // White background
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)" // Subtle shadow
+        }}>
+          {/* Display selected course tags */}
+          {routineCourses.map(course => (
+            <span key={course.value} style={{ backgroundColor: '#e0f7fa', color: '#004d40', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
+              {course.label}
+              <button
+                type="button"
+                onClick={() => handleRemoveCourseTag(course.value)}
+                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#004d40', padding: 0 }}
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+          {/* Course input field */}
+          <input
+            type="text"
+            placeholder="Select courses..."
+            value={courseSearchTerm}
+            onChange={handleCourseInputChange}
+            onFocus={handleCourseInputFocus}
+            onBlur={handleCourseInputBlur}
+            style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
+          />
+        </div>
+
+        {/* Course suggestions list */}
+        {isCourseSuggestionsOpen && filteredCourseOptions.length > 0 && ( !isLoading && courseOptions.length > 0 ) && (
+          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+            {filteredCourseOptions.map(option => (
+              <li
+                key={option.value}
+                onClick={() => handleCourseSuggestionSelect(option)}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+              >
+                {option.label} {option.isDisabled && "(No seats available)"}
+              </li>
+            ))}
+          </ul>
+        )}
+         {/* Loading or empty state messages for courses */}
+        {isLoading && courseOptions.length === 0 && courseSearchTerm === '' && (
+             <div className="text-center py-2 text-gray-500 text-sm">Loading courses...</div>
+        )}
+         {!isLoading && courseOptions.length > 0 && courseSearchTerm !== '' && filteredCourseOptions.length === 0 && (
+                 <div className="text-center py-2 text-gray-500 text-sm">No matching courses found.</div>
+              )}
+            {!isLoading && courseOptions.length === 0 && courseSearchTerm === '' && (
+                <div className="text-center py-2 text-gray-500 text-sm">No courses loaded.</div>
+            )}
+
       </div>
       {/* Faculty Selection for Each Course */}
       {routineCourses.map(course => {
@@ -1259,67 +1513,111 @@ const MakeRoutinePage = () => {
           </div>
         );
       })}
-      {/* Days Selection */}
-      <div style={{ marginBottom: "20px" }}>
-        <label>Available Days:</label>
-        <Select
-          isMulti
-          options={DAYS.map(d => ({ value: d, label: d }))}
-          value={routineDays}
-          onChange={setRoutineDays}
-          placeholder="Select days..."
-          styles={{
-            multiValue: (provided) => ({
-              ...provided,
-              backgroundColor: '#e0f7fa', // Light cyan background
-              borderRadius: '4px',
-              border: '1px solid #b2ebf2'
-            }),
-            multiValueLabel: (provided) => ({
-              ...provided,
-              color: '#004d40' // Dark teal text color
-            }),
-            multiValueRemove: (provided) => ({
-              ...provided,
-              color: '#004d40',
-              ':hover': {
-                backgroundColor: '#b2ebf2',
-                color: '#004d40'
-              }
-            })
-          }}
-        />
+      {/* Available Days Selection with Autocomplete and Tags */}
+      <div style={{ marginBottom: "20px", position: "relative", textAlign: "left" }}>
+        <label style={{ display: "block", marginBottom: "5px" }}>Available Days:</label>
+        <div style={{ 
+          display: "flex", 
+          flexWrap: "wrap", 
+          alignItems: "center", 
+          border: "1px solid #e0e0e0", // Subtle border
+          borderRadius: "8px", // Rounded corners
+          padding: "8px 12px", // Internal padding
+          backgroundColor: "#fff", // White background
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)" // Subtle shadow
+        }}>
+          {/* Display selected day tags */}
+          {routineDays.map(day => (
+            <span key={day.value} style={{ backgroundColor: '#e0f7fa', color: '#004d40', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
+              {day.label}
+              <button
+                type="button"
+                onClick={() => handleRemoveDayTag(day.value)}
+                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#004d40', padding: 0 }}
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+          {/* Day input field */}
+          <input
+            type="text"
+            placeholder="Select days..."
+            value={daySearchTerm}
+            onChange={handleDayInputChange}
+            onFocus={handleDayInputFocus}
+            onBlur={handleDayInputBlur}
+            style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
+          />
+        </div>
+
+        {/* Day suggestions list */}
+        {isDaySuggestionsOpen && filteredDayOptions.length > 0 && (
+          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+            {filteredDayOptions.map(option => (
+              <li
+                key={option.value}
+                onClick={() => handleDaySuggestionSelect(option)}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+              >
+                {option.label}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      {/* Time Selection */}
-      <div style={{ marginBottom: "20px" }}>
-        <label>Available Times:</label>
-        <Select
-          isMulti
-          options={TIME_SLOTS}
-          value={routineTimes}
-          onChange={setRoutineTimes}
-          placeholder="Select available times (Bangladesh Time)..."
-          styles={{
-            multiValue: (provided) => ({
-              ...provided,
-              backgroundColor: '#e0f7fa', // Light cyan background
-              borderRadius: '4px',
-              border: '1px solid #b2ebf2'
-            }),
-            multiValueLabel: (provided) => ({
-              ...provided,
-              color: '#004d40' // Dark teal text color
-            }),
-            multiValueRemove: (provided) => ({
-              ...provided,
-              color: '#004d40',
-              ':hover': {
-                backgroundColor: '#b2ebf2',
-                color: '#004d40'
-              }
-            })
-          }}
-        />
+      {/* Available Times Selection with Autocomplete and Tags */}
+      <div style={{ marginBottom: "20px", position: "relative", textAlign: "left" }}>
+        <label style={{ display: "block", marginBottom: "5px" }}>Available Times:</label>
+        <div style={{ 
+          display: "flex", 
+          flexWrap: "wrap", 
+          alignItems: "center", 
+          border: "1px solid #e0e0e0", // Subtle border
+          borderRadius: "8px", // Rounded corners
+          padding: "8px 12px", // Internal padding
+          backgroundColor: "#fff", // White background
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)" // Subtle shadow
+        }}>
+          {/* Display selected time tags */}
+          {routineTimes.map(time => (
+            <span key={time.value} style={{ backgroundColor: '#e0f7fa', color: '#004d40', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '5px', display: 'inline-flex', alignItems: 'center' }}>
+              {time.label}
+              <button
+                type="button"
+                onClick={() => handleRemoveTimeTag(time.value)}
+                style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#004d40', padding: 0 }}
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+          {/* Time input field */}
+          <input
+            type="text"
+            placeholder="Select available times..."
+            value={timeSearchTerm}
+            onChange={handleTimeInputChange}
+            onFocus={handleTimeInputFocus}
+            onBlur={handleTimeInputBlur}
+            style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
+          />
+        </div>
+
+        {/* Time suggestions list */}
+        {isTimeSuggestionsOpen && filteredTimeOptions.length > 0 && (
+          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+            {filteredTimeOptions.map(option => (
+              <li
+                key={option.value}
+                onClick={() => handleTimeSuggestionSelect(option)}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+              >
+                {option.label}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {/* Commute Preference Selection */}
       <div style={{ marginBottom: "20px", textAlign: "left" }}>
@@ -1389,7 +1687,7 @@ function App() {
   const [sections, setSections] = useState([]);
   const [routineCourses, setRoutineCourses] = useState([]);
   const [routineFaculty, setRoutineFaculty] = useState(null);
-  const [routineDays, setRoutineDays] = useState(DAYS.map(d => ({ value: d, label: d })));
+  const [routineDays, setRoutineDays] = useState(DAYS.map(d => ({ value: d, label: d }))); // Reverted to include all days
   const [routineFacultyOptions, setRoutineFacultyOptions] = useState([]);
   const [routineResult, setRoutineResult] = useState(null);
   const [availableFacultyByCourse, setAvailableFacultyByCourse] = useState({});
@@ -1402,7 +1700,10 @@ function App() {
   const [selectedSectionsByFaculty, setSelectedSectionsByFaculty] = useState({});
   const [usedAI, setUsedAI] = useState(false);
   const [courseOptions, setCourseOptions] = useState([]);
-  const routineGridRef = useRef(null); // Create a ref for the routine grid
+  const [courseSearchTerm, setCourseSearchTerm] = useState('');
+  const [filteredCourseOptions, setFilteredCourseOptions] = useState([]);
+  const [isCourseSuggestionsOpen, setIsCourseSuggestionsOpen] = useState(false);
+  const routineGridRef = useRef(null);
 
   // Function to handle PNG download
   const handleDownloadPNG = () => {
@@ -1427,7 +1728,10 @@ function App() {
         isDisabled: course.totalAvailableSeats <= 0,
         totalAvailableSeats: course.totalAvailableSeats
       }));
+      // Sort options alphabetically
+      options.sort((a, b) => a.label.localeCompare(b.label));
       setCourseOptions(options);
+      setFilteredCourseOptions(options);
     });
   }, []);
 
@@ -1469,9 +1773,6 @@ function App() {
     }
   }, [routineCourses]);
 
-  // State to manage active tab
-  const [activeTab, setActiveTab] = useState('seat-status'); // Default to Seat Status
-
   return (
     <div className="app-container">
       <AnimatedGridPattern
@@ -1485,32 +1786,11 @@ function App() {
         <div className="header">
           <h1 className="usis-title">RoutinEZ</h1>
         </div>
-        <ul className="nav nav-tabs mb-4">
-          <li className="nav-item">
-            <a
-              className={`nav-link ${activeTab === 'seat-status' ? 'active' : ''}`}
-              href="#seat-status"
-              onClick={(e) => { e.preventDefault(); setActiveTab('seat-status'); }}
-            >
-              Seat Status
-            </a>
-          </li>
-          <li className="nav-item">
-            <a
-              className={`nav-link ${activeTab === 'make-routine' ? 'active' : ''}`}
-              href="#make-routine"
-              onClick={(e) => { e.preventDefault(); setActiveTab('make-routine'); }}
-            >
-              Make Routine
-            </a>
-          </li>
-        </ul>
-
+        <div className="flex justify-center mb-6">
+          <SeatStatusDialog />
+        </div>
         <div className="tab-content">
-          <div className={`tab-pane fade ${activeTab === 'seat-status' ? 'show active' : ''}`} id="seat-status">
-            <SeatStatusPage courses={courses} />
-          </div>
-          <div className={`tab-pane fade ${activeTab === 'make-routine' ? 'show active' : ''}`} id="make-routine">
+          <div className="tab-pane fade show active" id="make-routine">
             <MakeRoutinePage />
           </div>
         </div>
