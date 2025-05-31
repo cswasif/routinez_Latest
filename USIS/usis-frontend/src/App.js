@@ -523,7 +523,7 @@ const ExamSchedule = ({ sections }) => {
         Exam Dates
       </h3>
       <div style={{ overflowX: 'auto' }}>
-        <table className="exam-dates-table">
+        <table className="routine-table">
           <thead>
             <tr>
               <th>Course</th>
@@ -535,7 +535,7 @@ const ExamSchedule = ({ sections }) => {
           <tbody>
             {examDates.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ textAlign: 'center', color: '#888', padding: '24px', fontStyle: 'italic' }}>
+                <td colSpan={4} style={{ textAlign: 'center', color: '#888', padding: '12px', fontStyle: 'italic' }}>
                   No exams scheduled.
                 </td>
               </tr>
@@ -548,7 +548,7 @@ const ExamSchedule = ({ sections }) => {
                     {exam.midterm.date ? (
                       <>
                         <div>{exam.midterm.date}</div>
-                        {exam.midterm.time && <div style={{ color: '#666', fontSize: '0.97em' }}>{exam.midterm.time}</div>}
+                        {exam.midterm.time && <div style={{ color: '#666', fontSize: '0.9em' }}>{exam.midterm.time}</div>}
                       </>
                     ) : (
                       <span style={{ color: '#aaa', fontStyle: 'italic' }}>Not Scheduled</span>
@@ -558,7 +558,7 @@ const ExamSchedule = ({ sections }) => {
                     {exam.final.date ? (
                       <>
                         <div>{exam.final.date}</div>
-                        {exam.final.time && <div style={{ color: '#666', fontSize: '0.97em' }}>{exam.final.time}</div>}
+                        {exam.final.time && <div style={{ color: '#666', fontSize: '0.9em' }}>{exam.final.time}</div>}
                       </>
                     ) : (
                       <span style={{ color: '#aaa', fontStyle: 'italic' }}>Not Scheduled</span>
@@ -1246,13 +1246,15 @@ const MakeRoutinePage = () => {
               marginTop: '20px',
               padding: '10px 20px',
               fontSize: '1em',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
+              backgroundColor: '#ffffff', // White background
+              color: '#333333', // Dark text color
+              border: '1px solid #cccccc', // Subtle gray border
               borderRadius: '4px',
               cursor: 'pointer',
-              transition: 'background-color 0.3s ease'
+              transition: 'background-color 0.3s ease, border-color 0.3s ease'
             }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
           >
             Download as PNG
           </button>
