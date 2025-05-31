@@ -136,6 +136,10 @@ const SeatStatusDialog = () => {
         onClick={() => setOpen(true)}
         aria-label="Open seat status dialog"
         className="mt-4 md:mt-0"
+        style={{
+          padding: '10px 20px',
+          fontSize: '16px'
+        }}
       >
         Seat Status
       </Button>
