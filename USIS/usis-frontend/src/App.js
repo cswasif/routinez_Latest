@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import Select, { components } from "react-select";
+import Select from "react-select";
 import './App.css';
 import { format } from 'date-fns';
 import html2canvas from 'html2canvas';
-import { Waves } from "./components/ui/waves-background";
 import AnimatedGridPattern from "./components/ui/animated-grid-pattern";
 import SeatStatusDialog from "./SeatStatusDialog";
-import { Instagram, Facebook, Twitter, Linkedin, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 const API_BASE = "http://localhost:5000/api";
 
@@ -635,9 +634,7 @@ const CourseOption = ({ innerRef, innerProps, data, isSelected }) => (
 // --- Make Routine Page ---
 const MakeRoutinePage = () => {
   const [routineCourses, setRoutineCourses] = useState([]);
-  const [routineFaculty, setRoutineFaculty] = useState(null);
   const [routineDays, setRoutineDays] = useState(DAYS.map(d => ({ value: d, label: d }))); // Reverted to include all days
-  const [routineFacultyOptions, setRoutineFacultyOptions] = useState([]);
   const [routineResult, setRoutineResult] = useState(null);
   const [availableFacultyByCourse, setAvailableFacultyByCourse] = useState({});
   const [selectedFacultyByCourse, setSelectedFacultyByCourse] = useState({});
@@ -1822,9 +1819,6 @@ const MakeRoutinePage = () => {
       <div style={{ marginBottom: "20px", color: "#555" }}>
         <div>
           <b>Selected Courses:</b> {(Array.isArray(routineCourses) && routineCourses.length) ? routineCourses.map(c => (typeof c === 'object' ? (c.label || c.value || '') : String(c))).join(', ') : "None"}
-</div>
-<div>
-  <b>Selected Faculty:</b> {(routineFaculty && typeof routineFaculty === 'object') ? (routineFaculty.label || routineFaculty.value || '') : (routineFaculty || "None")}
         </div>
         <div>
           <b>Selected Days:</b> {Array.isArray(routineDays) && routineDays.length ? routineDays.map(d => (typeof d === 'object' ? (d.label || d.value || '') : String(d))).join(', ') : "None"}
