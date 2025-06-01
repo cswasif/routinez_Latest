@@ -25,6 +25,7 @@ module.exports = {
     'react/prop-types': 'off', // Turn off prop-types validation
     'no-empty': 'off', // Disable empty block statement warning
     'no-undef': 'off', // Disable undefined variable warnings for TypeScript files
+    '@typescript-eslint/no-unused-vars': 'off', // Disable unused variables warning from TypeScript plugin
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off'
   },
