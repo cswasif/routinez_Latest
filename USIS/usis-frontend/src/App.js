@@ -42,7 +42,7 @@ function renderRoutineGrid(sections, selectedDays) {
   
   // Helper to get abbreviated day name
   const getAbbreviatedDay = (day) => day.substring(0, 3);
-
+  
   // Build a lookup: { [day]: { [timeSlotValue]: [entries, ...] } }
   const grid = {};
   for (const day of DAYS) {
@@ -1360,7 +1360,7 @@ const MakeRoutinePage = () => {
       }}
     >
       {isLoading && !usedAI ? (
-         <>
+        <>
           Generating...
         </>
       ) : (
@@ -1518,7 +1518,7 @@ const MakeRoutinePage = () => {
           {/* Course input field */}
           <input
             type="text"
-            placeholder="Select courses..."
+          placeholder="Select courses..."
             aria-label="Select courses"
             value={courseSearchTerm}
             onChange={handleCourseInputChange}
@@ -1529,21 +1529,21 @@ const MakeRoutinePage = () => {
         </div>
 
         {/* Course suggestions list */}
-        {isCourseSuggestionsOpen && filteredCourseOptions.length > 0 && ( !isLoading && courseOptions.length > 0 ) && (
-          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
-            {filteredCourseOptions.map(option => (
-              <li
-                key={option.value}
-                onClick={() => handleCourseSuggestionSelect(option)}
-                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
-                role="option"
-                aria-selected={false}
-              >
-                {option.label} {option.isDisabled && "(No seats available)"}
-              </li>
-            ))}
-          </ul>
-        )}
+        {(isCourseSuggestionsOpen && filteredCourseOptions.length > 0 && ( !isLoading && courseOptions.length > 0 )) && (
+  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
+    {filteredCourseOptions.map(option => (
+      <li
+        key={option.value}
+        onClick={() => handleCourseSuggestionSelect(option)}
+        className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+        role="option"
+        aria-selected={false}
+      >
+        {option.label} {option.isDisabled && "(No seats available)"}
+      </li>
+    ))}
+  </ul>
+)}
          {/* Loading or empty state messages for courses */}
         {isLoading && courseOptions.length === 0 && courseSearchTerm === '' && (
              <div className="text-center py-2 text-gray-500 text-sm">Loading courses...</div>
@@ -1595,38 +1595,38 @@ const MakeRoutinePage = () => {
                   style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px', minWidth: 90 }}
                 />
                 {/* Faculty suggestions list */}
-                {isFacultySuggestionsOpen[course.value] && filteredFacultyOptions[course.value] && filteredFacultyOptions[course.value].length > 0 && (
-                  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
-                    {filteredFacultyOptions[course.value].map(option => (
-                      <li
-                        key={option.value}
-                        onClick={() => handleFacultySuggestionSelect(option, course.value)}
-                        className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
-                        role="option"
-                        aria-selected={false}
-                      >
-                        {option.label}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                {(isFacultySuggestionsOpen[course.value] && filteredFacultyOptions[course.value] && filteredFacultyOptions[course.value].length > 0) && (
+  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
+    {filteredFacultyOptions[course.value].map(option => (
+      <li
+        key={option.value}
+        onClick={() => handleFacultySuggestionSelect(option, course.value)}
+        className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+        role="option"
+        aria-selected={false}
+      >
+        {option.label}
+      </li>
+    ))}
+  </ul>
+)}
               </div>
             </div>
             {/* Section selection (vertical, below faculty) */}
-            {selectedFaculty.map(faculty => {
-              const facultyInfo = availableFacultyByCourse[course.value]?.[faculty.value];
-              if (!facultyInfo) return null;
-              const sectionOptions = facultyInfo.sections.map(section => ({
-                value: section.sectionName,
-                label: `${section.sectionName} (${section.capacity - section.consumedSeat} seats)`,
-                section: section
-              }));
+              {selectedFaculty.map(faculty => {
+                const facultyInfo = availableFacultyByCourse[course.value]?.[faculty.value];
+                if (!facultyInfo) return null;
+                const sectionOptions = facultyInfo.sections.map(section => ({
+                  value: section.sectionName,
+                  label: `${section.sectionName} (${section.capacity - section.consumedSeat} seats)`,
+                  section: section
+                }));
               const selectedSection = selectedSectionsByFaculty[course.value]?.[faculty.value] || null;
-              return (
+                return (
                 <div key={faculty.value} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 4 }}>
                   <label style={{ fontSize: "0.85em", color: "#666", marginBottom: 0, minWidth: 60 }}>
                     {faculty.value} Section:
-                  </label>
+                      </label>
                   {/* Custom section dropdown */}
                   <div style={{ position: 'relative', minWidth: 120 }}>
                     {/* Tag for selected section */}
@@ -1656,25 +1656,25 @@ const MakeRoutinePage = () => {
                       />
                     )}
                     {/* Section suggestions list */}
-                    {isSectionSuggestionsOpen[course.value]?.[faculty.value] && filteredSectionOptions[course.value]?.[faculty.value]?.length > 0 && (
-                      <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
-                        {filteredSectionOptions[course.value][faculty.value].map(option => (
-                          <li
-                            key={option.value}
-                            onClick={() => handleSectionSuggestionSelect(option, course.value, faculty.value)}
-                            className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
-                            role="option"
-                            aria-selected={false}
-                          >
-                            {option.label}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    {(isSectionSuggestionsOpen[course.value]?.[faculty.value] && filteredSectionOptions[course.value]?.[faculty.value]?.length > 0) && (
+  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
+    {filteredSectionOptions[course.value][faculty.value].map(option => (
+      <li
+        key={option.value}
+        onClick={() => handleSectionSuggestionSelect(option, course.value, faculty.value)}
+        className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+        role="option"
+        aria-selected={false}
+      >
+        {option.label}
+      </li>
+    ))}
+  </ul>
+)}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         );
       })}
@@ -1708,32 +1708,32 @@ const MakeRoutinePage = () => {
           {routineDays.length < DAYS.length && (
             <input
               type="text"
-              placeholder="Select days..."
+          placeholder="Select days..."
               value={daySearchTerm}
               onChange={handleDayInputChange}
               onFocus={handleDayInputFocus}
               onBlur={handleDayInputBlur}
               style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
-            />
+        />
           )}
-        </div>
+      </div>
 
         {/* Day suggestions list */}
-        {isDaySuggestionsOpen && filteredDayOptions.length > 0 && (
-          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
-            {filteredDayOptions.map(option => (
-              <li
-                key={option.value}
-                onClick={() => handleDaySuggestionSelect(option)}
-                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
-                role="option"
-                aria-selected={false}
-              >
-                {option.label}
-              </li>
-            ))}
-          </ul>
-        )}
+        {(isDaySuggestionsOpen && filteredDayOptions.length > 0) && (
+  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
+    {filteredDayOptions.map(option => (
+      <li
+        key={option.value}
+        onClick={() => handleDaySuggestionSelect(option)}
+        className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+        role="option"
+        aria-selected={false}
+      >
+        {option.label}
+      </li>
+    ))}
+  </ul>
+)}
       </div>
       {/* Available Times Selection with Autocomplete and Tags */}
       <div style={{ marginBottom: "20px", position: "relative", textAlign: "left" }}>
@@ -1776,21 +1776,21 @@ const MakeRoutinePage = () => {
         </div>
 
         {/* Time suggestions list */}
-        {isTimeSuggestionsOpen && filteredTimeOptions.length > 0 && (
-          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
-            {filteredTimeOptions.map(option => (
-              <li
-                key={option.value}
-                onClick={() => handleTimeSuggestionSelect(option)}
-                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
-                role="option"
-                aria-selected={false}
-              >
-                {option.label}
-              </li>
-            ))}
-          </ul>
-        )}
+{(isTimeSuggestionsOpen && filteredTimeOptions.length > 0) && (
+  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
+    {filteredTimeOptions.map(option => (
+      <li
+        key={option.value}
+        onClick={() => handleTimeSuggestionSelect(option)}
+        className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+        role="option"
+        aria-selected={false}
+      >
+        {option.label}
+      </li>
+    ))}
+  </ul>
+)}
       </div>
       {/* Commute Preference Selection */}
       <div style={{ marginBottom: "20px", textAlign: "left" }}>
@@ -1821,10 +1821,10 @@ const MakeRoutinePage = () => {
       {/* Summary of selections - always render strings only */}
       <div style={{ marginBottom: "20px", color: "#555" }}>
         <div>
-          <b>Selected Courses:</b> {Array.isArray(routineCourses) && routineCourses.length ? routineCourses.map(c => (typeof c === 'object' ? (c.label || c.value || '') : String(c))).join(', ') : "None"}
-        </div>
-        <div>
-          <b>Selected Faculty:</b> {routineFaculty && typeof routineFaculty === 'object' ? (routineFaculty.label || routineFaculty.value || '') : (routineFaculty || "None")}
+          <b>Selected Courses:</b> {(Array.isArray(routineCourses) && routineCourses.length) ? routineCourses.map(c => (typeof c === 'object' ? (c.label || c.value || '') : String(c))).join(', ') : "None"}
+</div>
+<div>
+  <b>Selected Faculty:</b> {(routineFaculty && typeof routineFaculty === 'object') ? (routineFaculty.label || routineFaculty.value || '') : (routineFaculty || "None")}
         </div>
         <div>
           <b>Selected Days:</b> {Array.isArray(routineDays) && routineDays.length ? routineDays.map(d => (typeof d === 'object' ? (d.label || d.value || '') : String(d))).join(', ') : "None"}
@@ -2124,8 +2124,8 @@ function App() {
           <div className="tab-pane fade show active" id="make-routine">
             <MakeRoutinePage setToast={setToast} setErrorBanner={setErrorBanner} />
           </div>
+          </div>
         </div>
-      </div>
       <Footer />
     </div>
   );
