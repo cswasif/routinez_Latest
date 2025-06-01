@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from './components/ui/table';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "./components/ui/dropdown-menu";
 import axios from 'axios';
 import { Button } from "./components/ui/button";
 import { formatTime12Hour } from './App';
@@ -76,7 +75,7 @@ const SeatStatusDialog = () => {
         if (Array.isArray(res.data)) {
           setSections(res.data.map((section) => ({ ...section, courseCode: selected.value })));
         } else {
-            setSections([]);
+          setSections([]);
         }
       } catch (error) {
         console.error('Failed to fetch sections for', selected.value, ':', error);
@@ -87,7 +86,6 @@ const SeatStatusDialog = () => {
     };
 
     fetchSections();
-
   }, [open, selected]);
 
   const handleInputChange = (event) => {
@@ -101,10 +99,10 @@ const SeatStatusDialog = () => {
       .filter(option => option.label.toLowerCase().includes(value.toLowerCase()));
     setCourseOptions(filteredOptions);
 
-    if (value.length > 0 && filteredOptions.length > 0 || (value.length === 0 && courses.length > 0)) {
-       setIsSuggestionsOpen(true);
+    if ((value.length > 0 && filteredOptions.length > 0) || (value.length === 0 && courses.length > 0)) {
+      setIsSuggestionsOpen(true);
     } else {
-       setIsSuggestionsOpen(false);
+      setIsSuggestionsOpen(false);
     }
   };
 
@@ -115,15 +113,15 @@ const SeatStatusDialog = () => {
   };
 
   const handleInputFocus = () => {
-      if (courses.length > 0) {
-          setIsSuggestionsOpen(true);
-      }
+    if (courses.length > 0) {
+      setIsSuggestionsOpen(true);
+    }
   };
 
   const handleInputBlur = () => {
-      setTimeout(() => {
-          setIsSuggestionsOpen(false);
-      }, 200);
+    setTimeout(() => {
+      setIsSuggestionsOpen(false);
+    }, 200);
   };
 
   const hasAvailableSeats = sections.some(
@@ -171,23 +169,22 @@ const SeatStatusDialog = () => {
           )}
 
           {loading && courses.length === 0 && searchTerm === '' && (
-             <div className="text-center py-2 text-gray-500 text-sm">Loading courses...</div>
+            <div className="text-center py-2 text-gray-500 text-sm">Loading courses...</div>
           )}
-           {searchTerm !== '' && courseOptions.length === 0 && !loading && (
-                 <div className="text-center py-2 text-gray-500 text-sm">No matching courses found.</div>
-              )}
-            {!loading && courses.length === 0 && searchTerm === '' && (
-                <div className="text-center py-2 text-gray-500 text-sm">No courses loaded.</div>
-            )}
-
+          {searchTerm !== '' && courseOptions.length === 0 && !loading && (
+            <div className="text-center py-2 text-gray-500 text-sm">No matching courses found.</div>
+          )}
+          {!loading && courses.length === 0 && searchTerm === '' && (
+            <div className="text-center py-2 text-gray-500 text-sm">No courses loaded.</div>
+          )}
         </div>
         <div className="min-h-[200px] max-h-[400px] overflow-y-auto overflow-x-auto">
           {loading && selected ? (
-             <div className="text-center py-8 text-gray-500">Loading sections...</div>
+            <div className="text-center py-8 text-gray-500">Loading sections...</div>
           ) : !selected && searchTerm === '' ? (
             <InfoMessage text="Search or select a course from the list above to see seat status." />
           ) : sections.length === 0 && !loading && (selected || searchTerm !== '') ? (
-             <InfoMessage text="No seat available for this course." />
+            <InfoMessage text="No seat available for this course." />
           ) : hasAvailableSeats ? (
             <div className="min-w-[900px]">
               <Table>
