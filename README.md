@@ -1,10 +1,10 @@
 # RoutinEZ - USIS Course Management System
 
-RoutinEZ is a comprehensive web application designed to simplify course management and routine generation for students. It provides real-time seat availability information and offers both manual and AI-powered tools to help you create an optimal class schedule.
+RoutinEZ is a comprehensive web application designed to simplify course management and routine generation for students. It consists of a frontend web interface and a backend API.
 
-## How it Works
+**Frontend:** Built with React.js, it provides a user-friendly interface for interacting with the backend, allowing you to search for courses, view seat status, select your preferences, and generate your routine.
 
-RoutinEZ consists of two main parts: a backend API and a frontend web interface. The backend, built with Python and Flask, fetches and processes course data, including seat availability, schedules, and exam dates. It also houses the routine generation logic, including the AI component. The frontend, built with React.js, provides a user-friendly interface for interacting with the backend, allowing you to search for courses, view seat status, select your preferences, and generate your routine.
+**Backend:** Built with Python and Flask, the backend API is structured as a serverless function for deployment on platforms like Vercel. It fetches and processes course data, including seat availability, schedules, and exam dates. It also houses the routine generation logic, including the AI component.
 
 ## Features
 
@@ -50,6 +50,8 @@ Faculty information plays a crucial role in both the Seat Status and Routine Gen
 -   Data parsing and handling
 
 ## Installation
+
+These instructions are for setting up the project for **local development**.
 
 ### Prerequisites
 -   Node.js (v14 or higher)
@@ -121,13 +123,29 @@ Detailed usage instructions are provided within the application interface itself
     }
     ```
 
+## Vercel Deployment
+
+This project is configured for easy deployment on Vercel. The `vercel.json` file at the root of the repository specifies how incoming requests are handled.
+
+-   The `rewrites` rule in `vercel.json` routes all requests to `/api/*` to the `api/usisvercel.py` serverless function.
+-   Vercel automatically detects the React application in the `USIS/usis-frontend` directory and builds/serves it as the frontend.
+
+To deploy to Vercel:
+
+1.  Push your changes to the `main` branch of your connected GitHub repository.
+2.  Vercel will automatically detect the push and trigger a new build and deployment.
+3.  Once the deployment is complete, your application will be live at your Vercel project URL.
+
+**Important:** After deployment, you may need to clear your browser cache to ensure you are loading the latest version of the frontend code.
+
 ## Project Structure
 
 ```
 RoutinEZ/
+├── api/
+│   ├── requirements.txt     # Python dependencies for Vercel serverless function
+│   └── usisvercel.py        # Backend serverless function (Python/Flask)
 ├── USIS/
-│   ├── usis.py              # Backend server (Python/Flask)
-│   ├── requirements.txt     # Python dependencies
 │   └── usis-frontend/       # React frontend application
 │       ├── public/          # Static assets
 │       ├── src/             # Frontend source code
@@ -140,7 +158,8 @@ RoutinEZ/
 │       └── package.json     # Frontend dependencies and scripts
 ├── .gitignore              # Specifies intentionally untracked files
 ├── LICENSE                 # Project license
-└── README.md               # Project documentation (this file)
+├── README.md               # Project documentation (this file)
+└── vercel.json             # Vercel configuration for routing
 ```
 
 ## Contributing
