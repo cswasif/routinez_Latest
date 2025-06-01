@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/usisvercel",
+      "destination": "/api/usisvercel.py"
+    }
+  ]
+} 
