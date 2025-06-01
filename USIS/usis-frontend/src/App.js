@@ -8,7 +8,7 @@ import AnimatedGridPattern from "./components/ui/animated-grid-pattern";
 import SeatStatusDialog from "./SeatStatusDialog";
 import { MessageCircle } from 'lucide-react';
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "/api";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const TIME_SLOTS = [

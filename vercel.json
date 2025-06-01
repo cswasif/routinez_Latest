@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/api/usisvercel",
+      "source": "/api/(.*)",
       "destination": "/api/usisvercel.py"
     }
   ]
