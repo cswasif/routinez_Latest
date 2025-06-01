@@ -193,6 +193,12 @@ input, select, .react-select__control, .react-select__input-container {
   min-height: 32px !important;
   font-size: 0.95rem !important;
   padding: 4px 8px !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, select:focus {
+  /* No color change, just smooth transition */
+  outline: none;
 }
 
 /* Compact multi-select tags */
@@ -210,4 +216,92 @@ input, select, .react-select__control, .react-select__input-container {
 input[type="radio"] + label, label[for] {
   font-size: 0.95rem !important;
   margin-right: 0.7rem !important;
+}
+
+body, .app-container {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+.card, .routine-table, .dropdown, .faculty-dropdown, .section-dropdown {
+  box-shadow: 0 4px 24px 0 rgba(79,140,255,0.10);
+  border-radius: 12px;
+  background: #fff;
+}
+
+label {
+  color: #222;
+  font-weight: 500;
+}
+
+button, .ai-best-routine-btn {
+  /* Ensure high contrast text */
+  color: #222;
+  background: #e6e6e6;
+  border: 1.5px solid #b0b8c9;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+button:focus-visible, .ai-best-routine-btn:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2.5px solid #222;
+  outline-offset: 2px;
+}
+
+/* Dropdown fade/slide animation */
+.dropdown, .faculty-dropdown, .section-dropdown, .routine-table th ul, .routine-table td ul, ul[role="listbox"] {
+  animation: dropdown-fade-slide 0.22s cubic-bezier(0.4,0,0.2,1);
+  transition: box-shadow 0.2s;
+}
+@keyframes dropdown-fade-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 700px) {
+  .content-container, .app-container {
+    padding: 0.5rem 0.2rem 0.5rem 0.2rem;
+    max-width: 100vw;
+  }
+  .card, .routine-table, .dropdown, .faculty-dropdown, .section-dropdown {
+    border-radius: 12px;
+    padding: 10px 6px !important;
+    margin-bottom: 12px !important;
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .routine-table {
+    font-size: 0.95em;
+    overflow-x: auto;
+    display: block;
+  }
+  .routine-table th, .routine-table td {
+    min-width: 80px;
+    padding: 6px 4px;
+  }
+  input, select, .react-select__control, .react-select__input-container {
+    width: 100% !important;
+    min-width: 0;
+    font-size: 1em !important;
+    padding: 10px 12px !important;
+    box-sizing: border-box;
+  }
+  button, .ai-best-routine-btn {
+    min-height: 44px;
+    font-size: 1.08em;
+    padding: 0 18px;
+    border-radius: 8px;
+  }
+  .card span, .card button, .card input, .card label {
+    font-size: 1em !important;
+    min-height: 36px;
+  }
+  .card span {
+    padding: 6px 12px !important;
+    margin-bottom: 6px !important;
+  }
 } 

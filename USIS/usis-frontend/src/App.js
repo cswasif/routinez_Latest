@@ -1491,7 +1491,7 @@ const MakeRoutinePage = () => {
       <p>Select courses and their faculty, then choose available days and times.</p>
       {/* Course Selection with Autocomplete and Tags */}
       <div style={{ marginBottom: "20px", position: "relative", textAlign: "left" }}>
-        <label style={{ display: "block", marginBottom: "5px" }}>Courses:</label>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: '1.13em', fontWeight: 600, letterSpacing: '0.01em' }}>Courses:</label>
         <div style={{ 
           display: "flex", 
           flexWrap: "wrap", 
@@ -1519,6 +1519,7 @@ const MakeRoutinePage = () => {
           <input
             type="text"
             placeholder="Select courses..."
+            aria-label="Select courses"
             value={courseSearchTerm}
             onChange={handleCourseInputChange}
             onFocus={handleCourseInputFocus}
@@ -1529,12 +1530,14 @@ const MakeRoutinePage = () => {
 
         {/* Course suggestions list */}
         {isCourseSuggestionsOpen && filteredCourseOptions.length > 0 && ( !isLoading && courseOptions.length > 0 ) && (
-          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
             {filteredCourseOptions.map(option => (
               <li
                 key={option.value}
                 onClick={() => handleCourseSuggestionSelect(option)}
                 className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+                role="option"
+                aria-selected={false}
               >
                 {option.label} {option.isDisabled && "(No seats available)"}
               </li>
@@ -1561,17 +1564,7 @@ const MakeRoutinePage = () => {
         const selectedFaculty = selectedFacultyByCourse[course.value] || [];
 
         return (
-          <div key={course.value} style={{
-            marginBottom: "10px",
-            padding: "10px 14px",
-            border: "1px solid #ddd",
-            borderRadius: "6px",
-            background: "#fafbfc",
-            fontSize: "0.97em",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px"
-          }}>
+          <div key={course.value} className="card" style={{ marginBottom: "10px", padding: "10px 14px", fontSize: "0.97em", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ fontWeight: 600, fontSize: "1.08em", marginBottom: 2 }}>{course.label}</div>
             {/* Faculty selection */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1594,6 +1587,7 @@ const MakeRoutinePage = () => {
                 <input
                   type="text"
                   placeholder="Select faculty..."
+                  aria-label={`Select faculty for ${course.label}`}
                   value={facultySearchTerm[course.value] || ''}
                   onChange={e => handleFacultyInputChange(e, course.value)}
                   onFocus={() => handleFacultyInputFocus(course.value)}
@@ -1602,12 +1596,14 @@ const MakeRoutinePage = () => {
                 />
                 {/* Faculty suggestions list */}
                 {isFacultySuggestionsOpen[course.value] && filteredFacultyOptions[course.value] && filteredFacultyOptions[course.value].length > 0 && (
-                  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+                  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
                     {filteredFacultyOptions[course.value].map(option => (
                       <li
                         key={option.value}
                         onClick={() => handleFacultySuggestionSelect(option, course.value)}
                         className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+                        role="option"
+                        aria-selected={false}
                       >
                         {option.label}
                       </li>
@@ -1651,6 +1647,7 @@ const MakeRoutinePage = () => {
                       <input
                         type="text"
                         placeholder="Section..."
+                        aria-label={`Select section for ${faculty.value} in ${course.label}`}
                         value={sectionSearchTerm[course.value]?.[faculty.value] || ''}
                         onChange={e => handleSectionInputChange(e, course.value, faculty.value, sectionOptions)}
                         onFocus={() => handleSectionInputFocus(course.value, faculty.value, sectionOptions)}
@@ -1660,12 +1657,14 @@ const MakeRoutinePage = () => {
                     )}
                     {/* Section suggestions list */}
                     {isSectionSuggestionsOpen[course.value]?.[faculty.value] && filteredSectionOptions[course.value]?.[faculty.value]?.length > 0 && (
-                      <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+                      <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
                         {filteredSectionOptions[course.value][faculty.value].map(option => (
                           <li
                             key={option.value}
                             onClick={() => handleSectionSuggestionSelect(option, course.value, faculty.value)}
                             className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+                            role="option"
+                            aria-selected={false}
                           >
                             {option.label}
                           </li>
@@ -1681,7 +1680,7 @@ const MakeRoutinePage = () => {
       })}
       {/* Available Days Selection with Autocomplete and Tags */}
       <div style={{ marginBottom: "20px", position: "relative", textAlign: "left" }}>
-        <label style={{ display: "block", marginBottom: "5px" }}>Available Days:</label>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: '1.13em', fontWeight: 600, letterSpacing: '0.01em' }}>Available Days:</label>
         <div style={{ 
           display: "flex", 
           flexWrap: "wrap", 
@@ -1721,12 +1720,14 @@ const MakeRoutinePage = () => {
 
         {/* Day suggestions list */}
         {isDaySuggestionsOpen && filteredDayOptions.length > 0 && (
-          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
             {filteredDayOptions.map(option => (
               <li
                 key={option.value}
                 onClick={() => handleDaySuggestionSelect(option)}
                 className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+                role="option"
+                aria-selected={false}
               >
                 {option.label}
               </li>
@@ -1736,7 +1737,7 @@ const MakeRoutinePage = () => {
       </div>
       {/* Available Times Selection with Autocomplete and Tags */}
       <div style={{ marginBottom: "20px", position: "relative", textAlign: "left" }}>
-        <label style={{ display: "block", marginBottom: "5px" }}>Available Times:</label>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: '1.13em', fontWeight: 600, letterSpacing: '0.01em' }}>Available Times:</label>
         <div style={{ 
           display: "flex", 
           flexWrap: "wrap", 
@@ -1776,12 +1777,14 @@ const MakeRoutinePage = () => {
 
         {/* Time suggestions list */}
         {isTimeSuggestionsOpen && filteredTimeOptions.length > 0 && (
-          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+          <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }} role="listbox" tabIndex={0}>
             {filteredTimeOptions.map(option => (
               <li
                 key={option.value}
                 onClick={() => handleTimeSuggestionSelect(option)}
                 className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+                role="option"
+                aria-selected={false}
               >
                 {option.label}
               </li>
@@ -1791,7 +1794,7 @@ const MakeRoutinePage = () => {
       </div>
       {/* Commute Preference Selection */}
       <div style={{ marginBottom: "20px", textAlign: "left" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", color: "#555" }}>Commute Preference:</label>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", color: "#555", fontSize: '1.13em', letterSpacing: '0.01em' }}>Commute Preference:</label>
         <div>
           <label style={{ marginRight: "15px" }}>
             <input
@@ -1934,6 +1937,75 @@ function Footer() {
   );
 }
 
+// Toast and ErrorBanner components
+function Toast({ message, onClose }) {
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [message, onClose]);
+  if (!message) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 24,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      background: 'rgba(40,60,255,0.97)',
+      color: '#fff',
+      padding: '12px 32px',
+      borderRadius: 12,
+      fontWeight: 600,
+      fontSize: '1.08em',
+      zIndex: 9999,
+      boxShadow: '0 4px 24px 0 rgba(79,140,255,0.18)',
+      minWidth: 180,
+      textAlign: 'center',
+      letterSpacing: '0.01em',
+      opacity: 0.97,
+      pointerEvents: 'none',
+    }}>
+      {message}
+    </div>
+  );
+}
+function ErrorBanner({ message, onClose }) {
+  if (!message) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      background: '#ffebee',
+      color: '#c62828',
+      borderBottom: '2px solid #ffcdd2',
+      padding: '16px 0',
+      zIndex: 9998,
+      textAlign: 'center',
+      fontWeight: 600,
+      fontSize: '1.08em',
+      letterSpacing: '0.01em',
+      boxShadow: '0 2px 12px 0 rgba(198,40,40,0.08)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
+    }}>
+      <span style={{marginRight: 8}}>⚠️ {message}</span>
+      <button onClick={onClose} style={{
+        background: 'none',
+        border: 'none',
+        color: '#c62828',
+        fontWeight: 700,
+        fontSize: '1.2em',
+        cursor: 'pointer',
+        marginLeft: 8,
+      }} aria-label="Dismiss error">×</button>
+    </div>
+  );
+}
+
 function App() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -2026,8 +2098,14 @@ function App() {
     }
   }, [routineCourses]);
 
+  // Toast and error banner state
+  const [toast, setToast] = useState("");
+  const [errorBanner, setErrorBanner] = useState("");
+
   return (
     <div className="app-container">
+      <Toast message={toast} onClose={() => setToast("")} />
+      <ErrorBanner message={errorBanner} onClose={() => setErrorBanner("")} />
       <AnimatedGridPattern
         numSquares={30}
         maxOpacity={0.3}
@@ -2044,7 +2122,7 @@ function App() {
         </div>
         <div className="tab-content">
           <div className="tab-pane fade show active" id="make-routine">
-            <MakeRoutinePage />
+            <MakeRoutinePage setToast={setToast} setErrorBanner={setErrorBanner} />
           </div>
         </div>
       </div>
