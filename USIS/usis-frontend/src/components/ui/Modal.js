@@ -15,7 +15,8 @@ const Modal = ({ open, onClose, children }) => {
       onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4 md:mx-auto"
+        className="relative bg-white rounded-lg shadow-lg p-6 w-full mx-4 md:mx-auto compact-modal"
+        style={{ maxWidth: '965px' }}
         onClick={handleContentClick}
       >
         {children}

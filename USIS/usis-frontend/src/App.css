@@ -8,21 +8,26 @@
 .content-container {
   position: relative;
   z-index: 10;
-  max-width: 1200px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+  /* border-top: 2px solid #dee2e6; */
+  /* border: 1px solid #dee2e6; */
+  /* border-radius: 0.5rem; */
+  /* background: #fff; */
+  /* box-shadow: 0 2px 8px rgba(0,0,0,0.03); */
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .usis-title {
   margin: 0;
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: #333;
   font-weight: bold;
 }
@@ -110,9 +115,8 @@
 /* Tab Content */
 .tab-content {
   background-color: #fff;
-  border: 1px solid #dee2e6;
-  border-top: none;
-  padding: 1rem;
+  /* border: 1px solid #dee2e6; */
+  padding: 0.7rem !important;
   border-radius: 0 0 0.25rem 0.25rem;
 }
 
@@ -122,6 +126,11 @@
 
 .tab-pane.show.active {
   display: block;
+  border-top: 2px solid #dee2e6;
+  border-left: 2px solid #dee2e6;
+  border-right: 2px solid #dee2e6;
+  border-bottom: 2px solid #dee2e6;
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
 }
 
 /* Routine Table Styling (Matching Seat Status Table) */
@@ -174,4 +183,28 @@
 .routine-table .schedule-room {
     color: #6c757d;
     font-size: 0.8em; /* Consistent smaller font */
+}
+
+/* Make form elements more compact */
+input, select, .react-select__control, .react-select__input-container {
+  min-height: 32px !important;
+  font-size: 0.95rem !important;
+  padding: 4px 8px !important;
+}
+
+/* Compact multi-select tags */
+.react-select__multi-value {
+  font-size: 0.92rem !important;
+  padding: 2px 6px !important;
+}
+
+/* Reduce margin between form sections */
+.content-container > * {
+  margin-bottom: 0.7rem !important;
+}
+
+/* Compact radio buttons and labels */
+input[type="radio"] + label, label[for] {
+  font-size: 0.95rem !important;
+  margin-right: 0.7rem !important;
 } 

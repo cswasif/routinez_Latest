@@ -3,24 +3,10 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Select from "react-select";
 import './App.css'; // Assuming shared styles
-import { format } from 'date-fns';
 import { Link } from 'react-router-dom'; // Import Link for navigation
+import { formatTime12Hour } from './App';
 
 const API_BASE = "http://localhost:5000/api";
-
-// Helper function to format 24-hour time string to 12-hour AM/PM
-const formatTime12Hour = (timeString) => {
-    if (!timeString) return 'N/A';
-    try {
-        const [hours, minutes] = timeString.split(':').map(Number);
-        const date = new Date();
-        date.setHours(hours, minutes, 0, 0);
-        return format(date, 'h:mm aa');
-    } catch (error) {
-        console.error("Error formatting time:", timeString, error);
-        return timeString;
-    }
-};
 
 function SectionStatusPage() {
   const [courses, setCourses] = useState([]);

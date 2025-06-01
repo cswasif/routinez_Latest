@@ -1,171 +1,177 @@
 # RoutinEZ - USIS Course Management System
 
-RoutinEZ is a comprehensive course management system designed to help students manage their course schedules, check seat availability, and generate optimal class routines. The system provides both a user-friendly web interface and a robust backend API.
+RoutinEZ is a comprehensive web application designed to simplify course management and routine generation for students. It provides real-time seat availability information and offers both manual and AI-powered tools to help you create an optimal class schedule.
+
+## How it Works
+
+RoutinEZ consists of two main parts: a backend API and a frontend web interface. The backend, built with Python and Flask, fetches and processes course data, including seat availability, schedules, and exam dates. It also houses the routine generation logic, including the AI component. The frontend, built with React.js, provides a user-friendly interface for interacting with the backend, allowing you to search for courses, view seat status, select your preferences, and generate your routine.
 
 ## Features
 
+RoutinEZ offers the following key features:
+
 ### Seat Status
-- Real-time seat availability tracking
-- Detailed section information
-- Faculty-wise section distribution
-- Exam schedule display
-- Room allocation information
+-   **Real-time Data:** Check the current seat availability for any course.
+-   **Detailed Course Information:** View detailed schedules (class and lab), assigned faculty, room information, and exam dates (midterm and final) for each section.
+-   **Faculty Breakdown:** See how sections and available seats are distributed among different faculty members teaching a course.
 
 ### Routine Generation
-- AI-powered routine generation
-- Manual routine generation
-- Conflict detection (class, lab, and exam conflicts)
-- Customizable day and time preferences
-- Commute preference consideration
-- Export routine as PNG
+-   **Flexible Input:** Easily select your desired courses, preferred faculty members, available days of the week, and time slots using intuitive input fields with autocomplete and tagging.
+-   **AI-Powered Optimization:** Leverage the power of AI to generate a routine that attempts to optimize based on your preferences and a chosen commute style (living near or far from campus).
+-   **Manual Control:** If you prefer, you can generate routines without the AI, based purely on your selected courses, faculty, days, and times.
+-   **Conflict Detection:** The system automatically identifies and reports potential conflicts in your generated routine, including overlapping class/lab times and conflicting exam schedules.
+-   **PNG Export:** Download your generated routine as a shareable image file.
+
+## How AI is Used
+
+The AI in RoutinEZ is specifically designed to assist in generating a better routine based on your input. When you choose to "Use AI for Best Routine," the system sends your selected courses, preferred faculty, available days, times, and commute preference to the backend. The AI algorithm then processes this information, considering factors like minimizing travel time (based on commute preference) and optimizing the distribution of classes, to propose a routine that best fits your criteria while avoiding conflicts.
+
+## How Faculty Information is Used
+
+Faculty information plays a crucial role in both the Seat Status and Routine Generation features:
+
+-   **Seat Status:** In the Seat Status view, you can see which faculty members are teaching each section and the availability of seats within those sections taught by specific faculty. This helps you make informed decisions based on instructor preferences.
+-   **Routine Generation:** When generating a routine, you have the option to specify preferred faculty members for the courses you select. The routine generation logic (both manual and AI-powered) takes your faculty preferences into account when searching for available sections, prioritizing sections taught by your chosen instructors where possible.
 
 ## Tech Stack
 
 ### Frontend
-- React.js
-- React Select for enhanced dropdowns
-- HTML2Canvas for routine export
-- Custom UI components with CSS animations
+-   React.js
+-   Axios for API calls
+-   Date-fns for date formatting
+-   Html2canvas for routine export
+-   Custom components and inline styling for a minimal and modern look
 
 ### Backend
-- Python
-- Flask
-- RESTful API architecture
-- JSON data handling
+-   Python
+-   Flask
+-   RESTful API architecture
+-   AI/Optimization logic (implemented in Python)
+-   Data parsing and handling
 
 ## Installation
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- Python 3.8 or higher
-- npm or yarn
+-   Node.js (v14 or higher)
+-   Python 3.8 or higher
+-   npm or yarn
 
 ### Backend Setup
-1. Navigate to the USIS directory:
-   ```bash
-   cd USIS
-   ```
+1.  Navigate to the USIS directory:
+    ```bash
+    cd USIS
+    ```
 
-2. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+2.  Install Python dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-3. Start the backend server:
-   ```bash
-   python usis.py
-   ```
-   The server will run on http://localhost:5000
+3.  Start the backend server:
+    ```bash
+    python usis.py
+    ```
+    The server will run on `http://localhost:5000`
 
 ### Frontend Setup
-1. Navigate to the frontend directory:
-   ```bash
-   cd USIS/usis-frontend
-   ```
+1.  Navigate to the frontend directory:
+    ```bash
+    cd USIS/usis-frontend
+    ```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
 
-3. Start the development server:
-   ```bash
-   npm start
-   ```
-   The application will open in your browser at http://localhost:3000
+3.  Start the development server:
+    ```bash
+    npm start
+    ```
+    The application will open in your browser at `http://localhost:3000`
 
 ## Usage
 
-### Seat Status
-1. Select a course from the dropdown
-2. View available sections with:
-   - Seat availability
-   - Faculty information
-   - Class schedule
-   - Lab schedule
-   - Exam dates
-
-### Routine Generation
-1. Select courses you want to take
-2. Choose preferred faculty members
-3. Select available days
-4. Choose time slots
-5. Set commute preference
-6. Generate routine using either:
-   - Regular generation
-   - AI-powered generation
+Detailed usage instructions are provided within the application interface itself. Simply open the application in your browser and follow the prompts to check seat status or generate your routine.
 
 ## API Endpoints
 
 ### Courses
-- `GET /api/courses` - Get all available courses
-- `GET /api/course_details?course={code}` - Get detailed course information
+-   `GET /api/courses` - Get all available courses
+-   `GET /api/course_details?course={code}` - Get detailed course information
 
 ### Routine
-- `POST /api/routine` - Generate routine with parameters:
-  ```json
-  {
-    "courses": [
-      {
-        "course": "CSE101",
-        "faculty": ["John Doe"],
-        "sections": {
-          "John Doe": "A"
+-   `POST /api/routine` - Generate routine with parameters:
+
+    ```json
+    {
+      "courses": [
+        {
+          "course": "CSE101",
+          "faculty": ["John Doe"],
+          "sections": {
+            "John Doe": "A"
+          }
         }
-      }
-    ],
-    "days": ["Monday", "Wednesday"],
-    "times": ["8:00 AM-9:20 AM"],
-    "useAI": true,
-    "commutePreference": "far"
-  }
-  ```
+      ],
+      "days": ["Monday", "Wednesday"],
+      "times": ["8:00 AM-9:20 AM"],
+      "useAI": true,
+      "commutePreference": "far"
+    }
+    ```
 
 ## Project Structure
 
 ```
 RoutinEZ/
 ├── USIS/
-│   ├── usis.py              # Backend server
+│   ├── usis.py              # Backend server (Python/Flask)
 │   ├── requirements.txt     # Python dependencies
-│   └── usis-frontend/       # React frontend
-│       ├── public/          # Static files
-│       ├── src/             # Source code
-│       │   ├── components/  # React components
-│       │   ├── App.js       # Main application
-│       │   └── index.js     # Entry point
-│       └── package.json     # Node dependencies
-└── README.md               # Documentation
+│   └── usis-frontend/       # React frontend application
+│       ├── public/          # Static assets
+│       ├── src/             # Frontend source code
+│       │   ├── components/  # Reusable React components
+│       │   │   ├── ui/      # UI components (e.g., waves, grid)
+│       │   │   └── ...      # Other components (e.g., SeatStatusDialog)
+│       │   ├── App.js       # Main application component and logic
+│       │   ├── App.css      # Main application styles
+│       │   └── index.js     # Application entry point
+│       └── package.json     # Frontend dependencies and scripts
+├── .gitignore              # Specifies intentionally untracked files
+├── LICENSE                 # Project license
+└── README.md               # Project documentation (this file)
 ```
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Contributions are welcome! Please follow these steps:
+
+1.  Fork the repository.
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- USIS for course data structure
-- React community for UI components
-- Python Flask for backend framework
+-   Based on the USIS course data structure.
+-   Utilizes open-source libraries like React, Flask, Axios, date-fns, and html2canvas.
 
 ## Contact
 
-For any queries or support, please open an issue in the GitHub repository.
+For any questions, issues, or feedback, please open an issue on the GitHub repository.
 
 ## Future Enhancements
 
-- [ ] Dark mode support
-- [ ] Mobile responsiveness improvements
-- [ ] Advanced conflict resolution
-- [ ] Course prerequisites checking
-- [ ] GPA impact analysis
-- [ ] Export to PDF functionality
-- [ ] Multi-language support 
+-   [ ] Dark mode support
+-   [ ] Mobile responsiveness improvements
+-   [ ] More advanced conflict resolution algorithms
+-   [ ] Integration of course prerequisites checking
+-   [ ] Analysis of GPA impact based on routine choices
+-   [ ] Export routine to other formats (e.g., PDF, iCal)
+-   [ ] Multi-language support 

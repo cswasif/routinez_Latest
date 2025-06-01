@@ -2315,17 +2315,9 @@ IMPORTANT: You MUST provide a valid BEST_ID integer between 0 and {max_id} (incl
                         print(
                             f"\n⚠ Invalid ID: {best_id} (must be between 0 and {max_id})"
                         )
-                        best_combination = tied_combinations[0]["combination"]
-                        print("Using first combination as fallback")
-                        return (
-                            jsonify(
-                                {
-                                    "routine": best_combination,
-                                    "feedback": "Selected schedule with optimal campus days.",
-                                }
-                            ),
-                            200,
-                        )
+                        # Use modulo to wrap around to a valid index
+                        best_id = best_id % (max_id + 1)
+                        print(f"Wrapped around to valid index: {best_id}")
 
                     best_combination = tied_combinations[best_id]["combination"]
                     print(f"\n✓ Gemini selected combination {best_id}")

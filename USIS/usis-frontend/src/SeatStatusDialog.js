@@ -12,6 +12,7 @@ import {
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "./components/ui/dropdown-menu";
 import axios from 'axios';
 import { Button } from "./components/ui/button";
+import { formatTime12Hour } from './App';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -242,7 +243,7 @@ const SeatStatusDialog = () => {
                         <div className="flex flex-col gap-0.5">
                           {(item.sectionSchedule?.classSchedules || []).map((sched, i) => (
                             <span key={`${sched.day}-${sched.startTime}-${i}`} className="truncate">
-                              {sched.day} {sched.startTime} - {sched.endTime}
+                              {sched.day} {formatTime12Hour(sched.startTime)} - {formatTime12Hour(sched.endTime)}
                             </span>
                           ))}
                           {(item.labSchedules || []).map((sched, i) => (
@@ -250,7 +251,7 @@ const SeatStatusDialog = () => {
                               key={`lab-${sched.day}-${sched.startTime}-${i}`}
                               className="truncate text-gray-600 text-xs"
                             >
-                              Lab: {sched.day} {sched.startTime} - {sched.endTime}
+                              Lab: {sched.day} {formatTime12Hour(sched.startTime)} - {formatTime12Hour(sched.endTime)}
                             </span>
                           ))}
                         </div>

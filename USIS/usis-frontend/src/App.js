@@ -22,7 +22,7 @@ const TIME_SLOTS = [
 ];
 
 // Helper: format 24-hour time string to 12-hour AM/PM
-const formatTime12Hour = (timeString) => {
+export const formatTime12Hour = (timeString) => {
     if (!timeString) return 'N/A';
     try {
         const [hours, minutes] = timeString.split(':').map(Number);
@@ -1275,16 +1275,18 @@ const MakeRoutinePage = () => {
       style={{
         padding: "10px 20px",
         fontSize: "16px",
-        backgroundColor: isLoading ? "#f0f0f0" : "#ffffff", // White background
-        color: isLoading ? "#aaaaaa" : "#333333", // Dark text color
-        border: "1px solid #cccccc", // Subtle gray border
-        borderRadius: "4px",
+        backgroundColor: isLoading ? "#f0f0f0" : "#fff",
+        color: isLoading ? "#aaaaaa" : "#007bff",
+        border: "1.5px solid #4f8cff",
+        borderRadius: "6px",
         cursor: isLoading ? "not-allowed" : "pointer",
-        transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease',
+        transition: 'background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: '150px'
+        minWidth: '150px',
+        boxShadow: '0 2px 10px 0 rgba(79,140,255,0.10)',
+        fontWeight: 500
       }}
     >
       {isLoading && !usedAI ? (
@@ -1300,22 +1302,43 @@ const MakeRoutinePage = () => {
   const GenerateAIButton = () => (
     <button
       onClick={() => {
-        // Toggle the AI state first
         setUsedAI(prevUsedAI => {
           const newUsedAI = !prevUsedAI;
-          // Clear previous results and errors when toggling AI or regenerating
           setRoutineResult(null);
           setRoutineError(null);
           setAiFeedback(null);
-          // Trigger routine generation with the new AI state
           handleGenerateRoutine(newUsedAI);
           return newUsedAI;
         });
       }}
-      className="text-black border border-gray-400 px-4 py-2 rounded ml-2"
+      className="ai-best-routine-btn"
+      style={{
+        padding: "12px 28px",
+        fontSize: "17px",
+        fontWeight: 600,
+        color: "#fff",
+        border: "none",
+        borderRadius: "6px",
+        marginLeft: "12px",
+        background: "linear-gradient(90deg, #4f8cff 0%, #007bff 100%)",
+        boxShadow: "0 4px 18px 0 rgba(79,140,255,0.22), 0 1.5px 6px 0 rgba(0,123,255,0.13)",
+        cursor: isLoading ? "not-allowed" : "pointer",
+        outline: 'none',
+        transition: 'transform 0.15s, box-shadow 0.3s',
+        transform: isLoading ? 'scale(1)' : undefined
+      }}
+      onMouseOver={e => {
+        e.currentTarget.style.transform = 'scale(1.04)';
+        e.currentTarget.style.boxShadow = '0 6px 24px 0 rgba(79,140,255,0.28), 0 2px 8px 0 rgba(0,123,255,0.18)';
+      }}
+      onMouseOut={e => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = '0 4px 18px 0 rgba(79,140,255,0.22), 0 1.5px 6px 0 rgba(0,123,255,0.13)';
+      }}
+      disabled={isLoading}
     >
       {isLoading ? (
-         usedAI ? "Generating with AI..." : "Generating..." // Show appropriate loading text
+         usedAI ? "Generating with AI..." : "Generating..."
       ) : (
          usedAI ? "Using AI for Best Routine" : "Use AI for Best Routine"
       )}
@@ -1333,11 +1356,11 @@ const MakeRoutinePage = () => {
           display: "flex", 
           flexWrap: "wrap", 
           alignItems: "center", 
-          border: "1px solid #e0e0e0", // Subtle border
-          borderRadius: "8px", // Rounded corners
-          padding: "8px 12px", // Internal padding
-          backgroundColor: "#fff", // White background
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)" // Subtle shadow
+          border: "1px solid #e0e0e0",
+          borderRadius: "8px",
+          padding: "8px 12px",
+          backgroundColor: "#fff",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
         }}>
           {/* Display selected course tags */}
           {routineCourses.map(course => (
@@ -1428,20 +1451,20 @@ const MakeRoutinePage = () => {
                     }),
                     multiValue: (provided) => ({
                       ...provided,
-                      backgroundColor: '#f0f0f0', // Light gray background
+                      backgroundColor: '#f0f0f0',
                       borderRadius: '4px',
-                      border: '1px solid #cccccc' // Subtle gray border
+                      border: '1px solid #cccccc'
                     }),
                     multiValueLabel: (provided) => ({
                       ...provided,
-                      color: '#555555' // Dark gray text color
+                      color: '#555555'
                     }),
                     multiValueRemove: (provided) => ({
                       ...provided,
-                      color: '#555555', // Dark gray color for remove button
+                      color: '#555555',
                       ':hover': {
-                        backgroundColor: '#cccccc', // Darker gray on hover
-                        color: '#333333' // Even darker gray text on hover
+                        backgroundColor: '#cccccc',
+                        color: '#333333'
                       }
                     })
                   }}
@@ -1489,13 +1512,13 @@ const MakeRoutinePage = () => {
                           }),
                           multiValue: (provided) => ({
                             ...provided,
-                            backgroundColor: '#e0f7fa', // Light cyan background
+                            backgroundColor: '#e0f7fa',
                             borderRadius: '4px',
                             border: '1px solid #b2ebf2'
                           }),
                           multiValueLabel: (provided) => ({
                             ...provided,
-                            color: '#004d40' // Dark teal text color
+                            color: '#004d40'
                           }),
                           multiValueRemove: (provided) => ({
                             ...provided,
@@ -1522,11 +1545,11 @@ const MakeRoutinePage = () => {
           display: "flex", 
           flexWrap: "wrap", 
           alignItems: "center", 
-          border: "1px solid #e0e0e0", // Subtle border
-          borderRadius: "8px", // Rounded corners
-          padding: "8px 12px", // Internal padding
-          backgroundColor: "#fff", // White background
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)" // Subtle shadow
+          border: "1px solid #e0e0e0",
+          borderRadius: "8px",
+          padding: "8px 12px",
+          backgroundColor: "#fff",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
         }}>
           {/* Display selected day tags */}
           {routineDays.map(day => (
@@ -1541,16 +1564,18 @@ const MakeRoutinePage = () => {
               </button>
             </span>
           ))}
-          {/* Day input field */}
-          <input
-            type="text"
-            placeholder="Select days..."
-            value={daySearchTerm}
-            onChange={handleDayInputChange}
-            onFocus={handleDayInputFocus}
-            onBlur={handleDayInputBlur}
-            style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
-          />
+          {/* Day input field: only show if not all days are selected */}
+          {routineDays.length < DAYS.length && (
+            <input
+              type="text"
+              placeholder="Select days..."
+              value={daySearchTerm}
+              onChange={handleDayInputChange}
+              onFocus={handleDayInputFocus}
+              onBlur={handleDayInputBlur}
+              style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
+            />
+          )}
         </div>
 
         {/* Day suggestions list */}
@@ -1575,11 +1600,11 @@ const MakeRoutinePage = () => {
           display: "flex", 
           flexWrap: "wrap", 
           alignItems: "center", 
-          border: "1px solid #e0e0e0", // Subtle border
-          borderRadius: "8px", // Rounded corners
-          padding: "8px 12px", // Internal padding
-          backgroundColor: "#fff", // White background
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)" // Subtle shadow
+          border: "1px solid #e0e0e0",
+          borderRadius: "8px",
+          padding: "8px 12px",
+          backgroundColor: "#fff",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
         }}>
           {/* Display selected time tags */}
           {routineTimes.map(time => (
@@ -1594,16 +1619,18 @@ const MakeRoutinePage = () => {
               </button>
             </span>
           ))}
-          {/* Time input field */}
-          <input
-            type="text"
-            placeholder="Select available times..."
-            value={timeSearchTerm}
-            onChange={handleTimeInputChange}
-            onFocus={handleTimeInputFocus}
-            onBlur={handleTimeInputBlur}
-            style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
-          />
+          {/* Time input field: only show if not all times are selected */}
+          {routineTimes.length < TIME_SLOTS.length && (
+            <input
+              type="text"
+              placeholder="Select available times..."
+              value={timeSearchTerm}
+              onChange={handleTimeInputChange}
+              onFocus={handleTimeInputFocus}
+              onBlur={handleTimeInputBlur}
+              style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px' }}
+            />
+          )}
         </div>
 
         {/* Time suggestions list */}
