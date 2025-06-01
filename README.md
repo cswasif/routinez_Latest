@@ -58,22 +58,25 @@ These instructions are for setting up the project for **local development**.
 -   Python 3.8 or higher
 -   npm or yarn
 
-### Backend Setup
-1.  Navigate to the USIS directory:
+### Backend Setup (Vercel Structure Local Test)
+
+1.  Navigate to the root of the repository:
     ```bash
-    cd USIS
+    cd path/to/RoutinEZ
     ```
 
-2.  Install Python dependencies:
+2.  Install Python dependencies for the Vercel backend:
     ```bash
-    pip install -r requirements.txt
+    pip install -r api/requirements.txt
     ```
 
-3.  Start the backend server:
+3.  If your backend requires environment variables (like `GOOGLE_API_KEY`), create a `.env` file at the root of the repository.
+
+4.  Run the Vercel backend serverless function locally (requires `python-dotenv` if using .env):
     ```bash
-    python usis.py
+    python api/usisvercel.py
     ```
-    The server will run on `http://localhost:5000`
+    The server will run on `http://localhost:5000`.
 
 ### Frontend Setup
 1.  Navigate to the frontend directory:
@@ -123,6 +126,32 @@ Detailed usage instructions are provided within the application interface itself
     }
     ```
 
+## Project Structure
+
+This project follows a standard structure suitable for Vercel deployment:
+
+```
+RoutinEZ/
+├── api/                     # Contains Vercel Serverless Functions (Python)
+│   ├── requirements.txt     # Python dependencies for serverless function
+│   └── usisvercel.py        # Main backend serverless function (Flask application)
+├── USIS/
+│   └── usis-frontend/       # React frontend application
+│       ├── public/          # Static assets
+│       ├── src/             # Frontend source code
+│       │   ├── components/  # Reusable React components
+│       │   │   ├── ui/      # UI components (e.g., waves, grid)
+│       │   │   └── ...      # Other components
+│       │   ├── App.js       # Main application component and core logic
+│       │   ├── App.css      # Main application styles
+│       │   └── index.js     # Application entry point
+│       └── package.json     # Frontend dependencies and scripts
+├── .gitignore              # Specifies intentionally untracked files
+├── LICENSE                 # Project license
+├── README.md               # Project documentation (this file)
+└── vercel.json             # Vercel configuration for routing serverless functions
+```
+
 ## Vercel Deployment
 
 This project is configured for easy deployment on Vercel. The `vercel.json` file at the root of the repository specifies how incoming requests are handled.
@@ -136,31 +165,9 @@ To deploy to Vercel:
 2.  Vercel will automatically detect the push and trigger a new build and deployment.
 3.  Once the deployment is complete, your application will be live at your Vercel project URL.
 
-**Important:** After deployment, you may need to clear your browser cache to ensure you are loading the latest version of the frontend code.
+### 🚨 Important: Clear Browser Cache After Deployment
 
-## Project Structure
-
-```
-RoutinEZ/
-├── api/
-│   ├── requirements.txt     # Python dependencies for Vercel serverless function
-│   └── usisvercel.py        # Backend serverless function (Python/Flask)
-├── USIS/
-│   └── usis-frontend/       # React frontend application
-│       ├── public/          # Static assets
-│       ├── src/             # Frontend source code
-│       │   ├── components/  # Reusable React components
-│       │   │   ├── ui/      # UI components (e.g., waves, grid)
-│       │   │   └── ...      # Other components (e.g., SeatStatusDialog)
-│       │   ├── App.js       # Main application component and logic
-│       │   ├── App.css      # Main application styles
-│       │   └── index.js     # Application entry point
-│       └── package.json     # Frontend dependencies and scripts
-├── .gitignore              # Specifies intentionally untracked files
-├── LICENSE                 # Project license
-├── README.md               # Project documentation (this file)
-└── vercel.json             # Vercel configuration for routing
-```
+After a new Vercel deployment, it is **highly recommended** to clear your browser's cache and cookies for the application's URL. This ensures that your browser loads the latest version of the frontend code, which is crucial for seeing recent changes and avoiding issues like outdated API endpoints being called.
 
 ## Contributing
 
