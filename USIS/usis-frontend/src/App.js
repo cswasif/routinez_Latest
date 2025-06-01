@@ -7,6 +7,7 @@ import html2canvas from 'html2canvas';
 import { Waves } from "./components/ui/waves-background";
 import AnimatedGridPattern from "./components/ui/animated-grid-pattern";
 import SeatStatusDialog from "./SeatStatusDialog";
+import { Instagram, Facebook, Twitter, Linkedin, MessageCircle } from 'lucide-react';
 
 const API_BASE = "http://localhost:5000/api";
 
@@ -1710,6 +1711,89 @@ const MakeRoutinePage = () => {
   );
 };
 
+function Footer() {
+  return (
+    <footer
+      style={{
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '32px 0 16px 0',
+        background: 'transparent',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '1.1em',
+          fontWeight: 500,
+          color: '#555',
+          letterSpacing: '0.02em',
+          marginBottom: '16px',
+          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        Made with
+        <span
+          style={{
+            color: '#ff3b3b',
+            fontSize: '1.3em',
+            verticalAlign: 'middle',
+            filter: 'drop-shadow(0 1px 6px #ffb3b3)',
+            textShadow: '0 2px 8px #ffb3b3',
+            margin: '0 2px',
+          }}
+        >
+          &hearts;
+        </span>
+        by
+        <span
+          style={{
+            background: 'linear-gradient(90deg, #4f8cff 0%, #007bff 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: 600,
+            fontSize: '1em',
+            letterSpacing: '0.03em',
+            textShadow: '0 2px 8px rgba(79,140,255,0.13)',
+          }}
+        >
+          Wasif Faisal
+        </span>
+      </div>
+      <a
+        href="https://m.me/wa5if"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Messenger for bug reports or feedback"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: '#888',
+          textDecoration: 'none',
+          fontSize: '1em',
+          marginTop: '8px',
+          transition: 'color 0.2s',
+        }}
+        onMouseOver={e => {
+          e.currentTarget.style.color = '#007bff';
+        }}
+        onMouseOut={e => {
+          e.currentTarget.style.color = '#888';
+        }}
+      >
+        <MessageCircle size={28} color="currentColor" />
+        <span>Report bugs</span>
+      </a>
+    </footer>
+  );
+}
+
 function App() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -1824,6 +1908,7 @@ function App() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
