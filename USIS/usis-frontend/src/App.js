@@ -662,6 +662,16 @@ const MakeRoutinePage = () => {
   const [filteredTimeOptions, setFilteredTimeOptions] = useState(TIME_SLOTS); // Filtered time suggestions
   const [isTimeSuggestionsOpen, setIsTimeSuggestionsOpen] = useState(false); // Time suggestions list visibility
 
+  // Add state for faculty search and suggestions
+  const [facultySearchTerm, setFacultySearchTerm] = useState({});
+  const [filteredFacultyOptions, setFilteredFacultyOptions] = useState({});
+  const [isFacultySuggestionsOpen, setIsFacultySuggestionsOpen] = useState({});
+
+  // Add state for section search and suggestions (per course+faculty)
+  const [sectionSearchTerm, setSectionSearchTerm] = useState({});
+  const [filteredSectionOptions, setFilteredSectionOptions] = useState({});
+  const [isSectionSuggestionsOpen, setIsSectionSuggestionsOpen] = useState({});
+
   // Function to handle PNG download
   const handleDownloadPNG = () => {
     if (routineGridRef.current) {
@@ -1132,6 +1142,65 @@ const MakeRoutinePage = () => {
       }, 200);
   };
 
+  // Handler for faculty input change
+  const handleFacultyInputChange = (event, courseValue) => {
+    const value = event.target.value;
+    setFacultySearchTerm(prev => ({ ...prev, [courseValue]: value }));
+    const facultyOptions = Object.entries(availableFacultyByCourse[courseValue] || {})
+      .filter(([_, info]) => info.availableSeats > 0)
+      .map(([faculty, info]) => ({ value: faculty, label: faculty, info }));
+    let filtered;
+    if (value === '') {
+      filtered = facultyOptions.filter(option => !(selectedFacultyByCourse[courseValue] || []).some(f => f.value === option.value));
+    } else {
+      filtered = facultyOptions.filter(option =>
+        option.label.toLowerCase().includes(value.toLowerCase()) && !(selectedFacultyByCourse[courseValue] || []).some(f => f.value === option.value)
+      );
+    }
+    setFilteredFacultyOptions(prev => ({ ...prev, [courseValue]: filtered }));
+    setIsFacultySuggestionsOpen(prev => ({ ...prev, [courseValue]: true }));
+  };
+
+  // Handler for selecting a faculty from suggestions
+  const handleFacultySuggestionSelect = (option, courseValue) => {
+    if (!(selectedFacultyByCourse[courseValue] || []).some(f => f.value === option.value)) {
+      setSelectedFacultyByCourse(prev => ({
+        ...prev,
+        [courseValue]: [...(prev[courseValue] || []), option]
+      }));
+    }
+    setFacultySearchTerm(prev => ({ ...prev, [courseValue]: '' }));
+    setFilteredFacultyOptions(prev => ({
+      ...prev,
+      [courseValue]: (prev[courseValue] || []).filter(opt => opt.value !== option.value)
+    }));
+    setIsFacultySuggestionsOpen(prev => ({ ...prev, [courseValue]: false }));
+  };
+
+  // Handler for removing a faculty tag
+  const handleRemoveFacultyTag = (facultyValue, courseValue) => {
+    setSelectedFacultyByCourse(prev => ({
+      ...prev,
+      [courseValue]: (prev[courseValue] || []).filter(f => f.value !== facultyValue)
+    }));
+  };
+
+  // Handler for faculty input focus/blur
+  const handleFacultyInputFocus = (courseValue) => {
+    const facultyOptions = Object.entries(availableFacultyByCourse[courseValue] || {})
+      .filter(([_, info]) => info.availableSeats > 0)
+      .map(([faculty, info]) => ({ value: faculty, label: faculty, info }));
+    const filtered = facultyOptions.filter(option => !(selectedFacultyByCourse[courseValue] || []).some(f => f.value === option.value));
+    setFilteredFacultyOptions(prev => ({ ...prev, [courseValue]: filtered }));
+    setIsFacultySuggestionsOpen(prev => ({ ...prev, [courseValue]: true }));
+  };
+  const handleFacultyInputBlur = (courseValue) => {
+    setTimeout(() => {
+      setIsFacultySuggestionsOpen(prev => ({ ...prev, [courseValue]: false }));
+      setFacultySearchTerm(prev => ({ ...prev, [courseValue]: '' }));
+    }, 200);
+  };
+
   // Custom option component for faculty selection with sections
   const FacultyOption = ({ data, ...props }) => {
     const facultyInfo = availableFacultyByCourse[props.selectProps.name]?.[data.value];
@@ -1346,6 +1415,76 @@ const MakeRoutinePage = () => {
     </button>
   );
 
+  // Handler for section input change
+  const handleSectionInputChange = (event, courseValue, facultyValue, sectionOptions) => {
+    const value = event.target.value;
+    setSectionSearchTerm(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: value }
+    }));
+    let filtered = sectionOptions;
+    if (value !== '') {
+      filtered = sectionOptions.filter(option => option.label.toLowerCase().includes(value.toLowerCase()));
+    }
+    setFilteredSectionOptions(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: filtered }
+    }));
+    setIsSectionSuggestionsOpen(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: true }
+    }));
+  };
+
+  // Handler for selecting a section from suggestions
+  const handleSectionSuggestionSelect = (option, courseValue, facultyValue) => {
+    setSelectedSectionsByFaculty(prev => ({
+      ...prev,
+      [courseValue]: {
+        ...(prev[courseValue] || {}),
+        [facultyValue]: option
+      }
+    }));
+    setSectionSearchTerm(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: '' }
+    }));
+    setFilteredSectionOptions(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: [] }
+    }));
+    setIsSectionSuggestionsOpen(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: false }
+    }));
+  };
+
+  // Handler for section input focus
+  const handleSectionInputFocus = (courseValue, facultyValue, sectionOptions) => {
+    setFilteredSectionOptions(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: sectionOptions }
+    }));
+    setIsSectionSuggestionsOpen(prev => ({
+      ...prev,
+      [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: true }
+    }));
+  };
+
+  // Handler for section input blur
+  const handleSectionInputBlur = (courseValue, facultyValue) => {
+    setTimeout(() => {
+      setIsSectionSuggestionsOpen(prev => ({
+        ...prev,
+        [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: false }
+      }));
+      setSectionSearchTerm(prev => ({
+        ...prev,
+        [courseValue]: { ...(prev[courseValue] || {}), [facultyValue]: '' }
+      }));
+    }, 200);
+  };
+
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
       <h2>Make Routine</h2>
@@ -1422,120 +1561,121 @@ const MakeRoutinePage = () => {
         const selectedFaculty = selectedFacultyByCourse[course.value] || [];
 
         return (
-          <div key={course.value} style={{ marginBottom: "10px", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}>
-            <h3 style={{ margin: "0 0 6px 0" }}>{course.label}</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <label style={{ minWidth: "70px", fontSize: "0.9em" }}>Faculty:</label>
-                <Select
-                  isMulti
-                  name={course.value}
-                  options={facultyOptions}
-                  value={selectedFaculty}
-                  onChange={(selected) => handleFacultyChange(course.value, selected)}
-                  placeholder="Search and select faculty..."
-                  isDisabled={!availableFacultyByCourse[course.value] || facultyOptions.length === 0}
-                  components={{ Option: FacultyOption }}
-                  styles={{
-                    option: (provided, state) => ({
-                      ...provided,
-                      backgroundColor: state.isSelected ? '#4CAF50' : state.isFocused ? '#e6f3e6' : 'white',
-                      color: state.isSelected ? 'white' : 'black',
-                      cursor: 'pointer',
-                      padding: '4px 8px'
-                    }),
-                    menu: (provided) => ({ ...provided, zIndex: 9999 }),
-                    control: (provided) => ({
-                      ...provided,
-                      minHeight: '30px',
-                      padding: '0 4px'
-                    }),
-                    multiValue: (provided) => ({
-                      ...provided,
-                      backgroundColor: '#f0f0f0',
-                      borderRadius: '4px',
-                      border: '1px solid #cccccc'
-                    }),
-                    multiValueLabel: (provided) => ({
-                      ...provided,
-                      color: '#555555'
-                    }),
-                    multiValueRemove: (provided) => ({
-                      ...provided,
-                      color: '#555555',
-                      ':hover': {
-                        backgroundColor: '#cccccc',
-                        color: '#333333'
-                      }
-                    })
-                  }}
-                  noOptionsMessage={() => "No faculty available with seats"}
-                  isClearable={true}
+          <div key={course.value} style={{
+            marginBottom: "10px",
+            padding: "10px 14px",
+            border: "1px solid #ddd",
+            borderRadius: "6px",
+            background: "#fafbfc",
+            fontSize: "0.97em",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px"
+          }}>
+            <div style={{ fontWeight: 600, fontSize: "1.08em", marginBottom: 2 }}>{course.label}</div>
+            {/* Faculty selection */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <label style={{ minWidth: 55, fontSize: "0.95em", color: "#444", marginBottom: 0 }}>Faculty:</label>
+              <div style={{ position: 'relative', minWidth: 180 }}>
+                {/* Display selected faculty tags */}
+                {(selectedFacultyByCourse[course.value] || []).map(faculty => (
+                  <span key={faculty.value} style={{ backgroundColor: '#f0f0f0', color: '#555555', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '2px', display: 'inline-flex', alignItems: 'center', fontSize: '0.97em' }}>
+                    {faculty.label}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFacultyTag(faculty.value, course.value)}
+                      style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#555555', padding: 0 }}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+                {/* Faculty input field */}
+                <input
+                  type="text"
+                  placeholder="Select faculty..."
+                  value={facultySearchTerm[course.value] || ''}
+                  onChange={e => handleFacultyInputChange(e, course.value)}
+                  onFocus={() => handleFacultyInputFocus(course.value)}
+                  onBlur={() => handleFacultyInputBlur(course.value)}
+                  style={{ flexGrow: 1, border: 'none', outline: 'none', padding: '5px', minWidth: 90 }}
                 />
+                {/* Faculty suggestions list */}
+                {isFacultySuggestionsOpen[course.value] && filteredFacultyOptions[course.value] && filteredFacultyOptions[course.value].length > 0 && (
+                  <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+                    {filteredFacultyOptions[course.value].map(option => (
+                      <li
+                        key={option.value}
+                        onClick={() => handleFacultySuggestionSelect(option, course.value)}
+                        className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+                      >
+                        {option.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              
-              {/* Optional Section Selection for each selected faculty */}
-              {selectedFaculty.map(faculty => {
-                const facultyInfo = availableFacultyByCourse[course.value]?.[faculty.value];
-                if (!facultyInfo) return null;
-
-                const sectionOptions = facultyInfo.sections.map(section => ({
-                  value: section.sectionName,
-                  label: `${section.sectionName} (${section.capacity - section.consumedSeat} seats)`,
-                  section: section
-                }));
-
-                return (
-                  <div key={faculty.value} style={{ marginLeft: "85px", marginTop: "2px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <label style={{ fontSize: "0.8em", color: "#666" }}>
-                        {faculty.value} Sections (Optional):
-                      </label>
-                      <Select
-                        value={selectedSectionsByFaculty[course.value]?.[faculty.value]}
-                        onChange={(selected) => handleSectionChange(course.value, faculty.value, selected)}
-                        options={sectionOptions}
-                        placeholder="Select section (optional)..."
-                        isClearable={true}
-                        styles={{
-                          container: (provided) => ({
-                            ...provided,
-                            width: '250px'
-                          }),
-                          control: (provided) => ({
-                            ...provided,
-                            minHeight: '26px',
-                            padding: '0 3px'
-                          }),
-                          option: (provided, state) => ({
-                            ...provided,
-                            padding: '1px 4px'
-                          }),
-                          multiValue: (provided) => ({
-                            ...provided,
-                            backgroundColor: '#e0f7fa',
-                            borderRadius: '4px',
-                            border: '1px solid #b2ebf2'
-                          }),
-                          multiValueLabel: (provided) => ({
-                            ...provided,
-                            color: '#004d40'
-                          }),
-                          multiValueRemove: (provided) => ({
-                            ...provided,
-                            color: '#004d40',
-                            ':hover': {
-                              backgroundColor: '#b2ebf2',
-                              color: '#004d40'
-                            }
-                          })
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
             </div>
+            {/* Section selection (vertical, below faculty) */}
+            {selectedFaculty.map(faculty => {
+              const facultyInfo = availableFacultyByCourse[course.value]?.[faculty.value];
+              if (!facultyInfo) return null;
+              const sectionOptions = facultyInfo.sections.map(section => ({
+                value: section.sectionName,
+                label: `${section.sectionName} (${section.capacity - section.consumedSeat} seats)`,
+                section: section
+              }));
+              const selectedSection = selectedSectionsByFaculty[course.value]?.[faculty.value] || null;
+              return (
+                <div key={faculty.value} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 4 }}>
+                  <label style={{ fontSize: "0.85em", color: "#666", marginBottom: 0, minWidth: 60 }}>
+                    {faculty.value} Section:
+                  </label>
+                  {/* Custom section dropdown */}
+                  <div style={{ position: 'relative', minWidth: 120 }}>
+                    {/* Tag for selected section */}
+                    {selectedSection && (
+                      <span style={{ backgroundColor: '#f0f0f0', color: '#555555', borderRadius: '4px', padding: '2px 8px', marginRight: '5px', marginBottom: '2px', display: 'inline-flex', alignItems: 'center', fontSize: '0.97em' }}>
+                        {selectedSection.label}
+                        <button
+                          type="button"
+                          onClick={() => handleSectionSuggestionSelect(null, course.value, faculty.value)}
+                          style={{ marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: '#555555', padding: 0 }}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    )}
+                    {/* Section input field: only show if not selected */}
+                    {!selectedSection && (
+                      <input
+                        type="text"
+                        placeholder="Section..."
+                        value={sectionSearchTerm[course.value]?.[faculty.value] || ''}
+                        onChange={e => handleSectionInputChange(e, course.value, faculty.value, sectionOptions)}
+                        onFocus={() => handleSectionInputFocus(course.value, faculty.value, sectionOptions)}
+                        onBlur={() => handleSectionInputBlur(course.value, faculty.value)}
+                        style={{ width: '100%', border: '1px solid #ccc', borderRadius: '4px', padding: '5px', minWidth: 60 }}
+                      />
+                    )}
+                    {/* Section suggestions list */}
+                    {isSectionSuggestionsOpen[course.value]?.[faculty.value] && filteredSectionOptions[course.value]?.[faculty.value]?.length > 0 && (
+                      <ul className="absolute z-50 w-full mt-1 rounded-md border border-black border-2 bg-white shadow-lg max-h-[200px] overflow-y-auto" style={{ textAlign: "left" }}>
+                        {filteredSectionOptions[course.value][faculty.value].map(option => (
+                          <li
+                            key={option.value}
+                            onClick={() => handleSectionSuggestionSelect(option, course.value, faculty.value)}
+                            className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0"
+                          >
+                            {option.label}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })}
