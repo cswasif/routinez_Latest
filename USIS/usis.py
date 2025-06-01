@@ -1594,14 +1594,12 @@ def try_manual_routine_generation(course_sections_map, selected_days, selected_t
             if not all_sections_valid:
                 continue
 
-            # Skip schedule conflict check as requested
             # STEP 3: Check schedule conflicts
-            # print("\n=== STEP 3: Checking Schedule Conflicts ===")
-            # if is_valid_combination(combination):
-            print("✓ Combination found (conflicts skipped)!")
-            return jsonify({"routine": combination}), 200
-            # else:
-            #     print("✗ Schedule conflict found")
+            if is_valid_combination(combination):
+                print("✓ Valid combination found!")
+                return jsonify({"routine": combination}), 200
+            else:
+                print("✗ Schedule conflict found")
 
         print("✗ No valid combination found")
         return (
@@ -1898,6 +1896,52 @@ def check_time_conflicts_ai():
                                         "course2": section2.get("courseCode"),
                                         "day": lab1.get("day"),
                                         "time1": f"{lab1.get('startTime')} - {lab1.get('endTime')}",
+                                        "time2": f"{lab2.get('startTime')} - {lab2.get('endTime')}",
+                                    }
+                                )
+
+                # Check lab-class and class-lab conflicts
+                # Lab in section1 vs Class in section2
+                for lab1 in section1.get("labSchedules", []):
+                    for sched2 in section2.get("sectionSchedule", {}).get(
+                        "classSchedules", []
+                    ):
+                        if lab1.get("day") == sched2.get("day"):
+                            start1 = TimeUtils.time_to_minutes(lab1.get("startTime"))
+                            end1 = TimeUtils.time_to_minutes(lab1.get("endTime"))
+                            start2 = TimeUtils.time_to_minutes(sched2.get("startTime"))
+                            end2 = TimeUtils.time_to_minutes(sched2.get("endTime"))
+
+                            if schedules_overlap(start1, end1, start2, end2):
+                                time_conflicts.append(
+                                    {
+                                        "type": "lab-class",
+                                        "course1": section1.get("courseCode"),
+                                        "course2": section2.get("courseCode"),
+                                        "day": lab1.get("day"),
+                                        "time1": f"{lab1.get('startTime')} - {lab1.get('endTime')}",
+                                        "time2": f"{sched2.get('startTime')} - {sched2.get('endTime')}",
+                                    }
+                                )
+                # Class in section1 vs Lab in section2
+                for sched1 in section1.get("sectionSchedule", {}).get(
+                    "classSchedules", []
+                ):
+                    for lab2 in section2.get("labSchedules", []):
+                        if sched1.get("day") == lab2.get("day"):
+                            start1 = TimeUtils.time_to_minutes(sched1.get("startTime"))
+                            end1 = TimeUtils.time_to_minutes(sched1.get("endTime"))
+                            start2 = TimeUtils.time_to_minutes(lab2.get("startTime"))
+                            end2 = TimeUtils.time_to_minutes(lab2.get("endTime"))
+
+                            if schedules_overlap(start1, end1, start2, end2):
+                                time_conflicts.append(
+                                    {
+                                        "type": "class-lab",
+                                        "course1": section1.get("courseCode"),
+                                        "course2": section2.get("courseCode"),
+                                        "day": sched1.get("day"),
+                                        "time1": f"{sched1.get('startTime')} - {sched1.get('endTime')}",
                                         "time2": f"{lab2.get('startTime')} - {lab2.get('endTime')}",
                                     }
                                 )
@@ -2541,6 +2585,7 @@ def get_routine_feedback_for_api(routine, commute_preference=None):
             f"This routine requires being on campus for exactly {num_days} day(s): {days_str}.\n"
             f"The student's commute preference is '{commute_preference}'.\n"
             "When writing your feedback, always use the number of days provided above, and do not estimate or guess the number of days from the routine data.\n"
+            "Assume all classes and labs are in-person (physical) unless explicitly marked as 'Online'. Do NOT say 'It's all online!' or make assumptions about online/physical mode.\n"
             "First, rate this routine out of 10.\n"
             "Then give me 2-3 quick points about:\n"
             "• How's your schedule looking?\n"
